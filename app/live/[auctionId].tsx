@@ -1,0 +1,239 @@
+import { View, Text, Pressable, ActivityIndicator, Alert, Platform, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Stack, useLocalSearchParams, router } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '../../lib/supabase';
+import { useAuthStore } from '../../lib/auth-store';
+import { useAppTheme, Colors } from '../../lib/theme';
+import { getAgoraToken, markSessionLive, markSessionEnded } from '../../lib/agora';
+import { formatZAR } from '../../components/LotCard';
+
+const APP_ID = process.env.EXPO_PUBLIC_AGORA_APP_ID ?? '';
+type AgoraClient = any;
+type AgoraTrack = any;
+
+export default function LiveRoom() {
+  const { auctionId } = useLocalSearchParams<{ auctionId: string }>();
+  const session = useAuthStore((s) => s.session);
+  const profile = useAuthStore((s) => s.profile);
+  const queryClient = useQueryClient();
+  const { bg, card, border, ink, muted } = useAppTheme();
+
+  const isHost = profile?.role === 'auctioneer';
+  const clientRef = useRef<AgoraClient>(null);
+  const micTrackRef = useRef<AgoraTrack>(null);
+
+  const [status, setStatus] = useState<'idle' | 'joining' | 'live' | 'ended'>('idle');
+  const [micOn, setMicOn] = useState(true);
+  const [listenerCount, setListenerCount] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+
+  const { data: currentLot } = useQuery({
+    queryKey: ['live-lot', auctionId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('lots').select('id, title, current_bid, starting_bid')
+        .eq('auction_id', auctionId).is('winner_id', null)
+        .order('created_at').limit(1).maybeSingle();
+      return data;
+    },
+    refetchInterval: 5000,
+  });
+
+  useEffect(() => {
+    const channel = supabase
+      .channel(`live-bids-${auctionId}-${Date.now()}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bids' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['live-lot', auctionId] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [auctionId]);
+
+  async function join() {
+    if (Platform.OS !== 'web') {
+      Alert.alert('Web only', 'Live audio requires the web app for now.');
+      return;
+    }
+    if (!session) { router.push('/(auth)/role'); return; }
+    setStatus('joining'); setError(null);
+
+    // 15-second timeout guard so the UI never gets stuck on "Connecting..."
+    const timeoutHandle = setTimeout(() => {
+      setError('Connection timed out. Check your network and try again.');
+      setStatus('idle');
+    }, 15000);
+
+    try {
+      const role = isHost ? 'publisher' : 'subscriber';
+      const { token } = await getAgoraToken(auctionId, role);
+      const AgoraRTC = (await import('agora-rtc-sdk-ng')).default;
+      AgoraRTC.setLogLevel(3); // warnings only
+      const client: AgoraClient = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
+      clientRef.current = client;
+      client.on('user-published', async (user: any, mediaType: string) => {
+        await client.subscribe(user, mediaType);
+        if (mediaType === 'audio') user.audioTrack?.play();
+      });
+      client.on('user-unpublished', (user: any) => { user.audioTrack?.stop(); });
+      client.on('user-joined', () => setListenerCount((c) => c + 1));
+      client.on('user-left', () => setListenerCount((c) => Math.max(0, c - 1)));
+      await client.setClientRole(isHost ? 'host' : 'audience');
+      // token may be null when Agora app is in testing mode (no certificate required)
+      await client.join(APP_ID, auctionId, token ?? null, null);
+      if (isHost) {
+        const mic = await AgoraRTC.createMicrophoneAudioTrack();
+        micTrackRef.current = mic;
+        await client.publish(mic);
+        await markSessionLive(auctionId, session.user.id);
+      }
+      clearTimeout(timeoutHandle);
+      setStatus('live');
+    } catch (e: any) {
+      clearTimeout(timeoutHandle);
+      setError(e.message ?? 'Failed to join');
+      setStatus('idle');
+    }
+  }
+
+  async function leave() {
+    micTrackRef.current?.close();
+    await clientRef.current?.leave();
+    if (isHost) await markSessionEnded(auctionId);
+    setStatus('ended');
+    router.back();
+  }
+
+  async function toggleMic() {
+    if (!micTrackRef.current) return;
+    await micTrackRef.current.setEnabled(!micOn);
+    setMicOn(!micOn);
+  }
+
+  useEffect(() => {
+    return () => { micTrackRef.current?.close(); clientRef.current?.leave(); };
+  }, []);
+
+  return (
+    <SafeAreaView style={[s.root, { backgroundColor: '#000' }]}>
+      <Stack.Screen options={{ headerShown: true, headerTitle: 'Live Auction', headerStyle: { backgroundColor: '#000' }, headerTintColor: '#fff' }} />
+
+      <View style={s.body}>
+        {/* Live indicator */}
+        <View style={s.liveRow}>
+          {status === 'live' ? (
+            <>
+              <View style={s.liveDot} />
+              <Text style={s.liveTxt}>LIVE</Text>
+              {isHost && <Text style={s.listenerTxt}>{listenerCount} listening</Text>}
+            </>
+          ) : (
+            <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14 }}>
+              {isHost ? 'Start your live auction session' : 'Join the live auction'}
+            </Text>
+          )}
+        </View>
+
+        {/* Current lot */}
+        {currentLot && (
+          <View style={s.lotCard}>
+            <Text style={s.lotLabel}>NOW ON THE BLOCK</Text>
+            <Text style={s.lotTitle}>{currentLot.title}</Text>
+            <Text style={s.lotBid}>{formatZAR(currentLot.current_bid ?? currentLot.starting_bid)}</Text>
+            {session && (
+              <Pressable onPress={() => router.push(`/lot/${currentLot.id}`)} style={s.bidBtn}>
+                <Text style={s.bidBtnTxt}>Place a Bid</Text>
+              </Pressable>
+            )}
+          </View>
+        )}
+
+        {/* Audio visualiser */}
+        {status === 'live' && (
+          <View style={s.visualiser}>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', height: 64, gap: 4 }}>
+              {Array.from({ length: 12 }).map((_, i) => (
+                <View key={i} style={{ width: 8, height: 8 + Math.random() * 40, borderRadius: 4, backgroundColor: 'rgba(11,95,255,0.7)' }} />
+              ))}
+            </View>
+            <Text style={s.micStatus}>
+              {isHost ? (micOn ? '🎙 Microphone on' : '🔇 Microphone muted') : '🔊 Listening live'}
+            </Text>
+          </View>
+        )}
+
+        {/* Error */}
+        {error && (
+          <View style={s.errorBox}>
+            <Text style={s.errorTxt}>{error}</Text>
+          </View>
+        )}
+
+        {/* Controls */}
+        <View style={{ gap: 12 }}>
+          {status === 'idle' && (
+            <Pressable onPress={join} style={s.actionBtn}>
+              <Text style={s.actionBtnTxt}>{isHost ? '🎙 Start Live Session' : '🔊 Join Live Audio'}</Text>
+            </Pressable>
+          )}
+          {status === 'joining' && (
+            <View style={s.joiningBox}>
+              <ActivityIndicator color={Colors.primary} />
+              <Text style={{ color: Colors.primary, fontSize: 13, marginTop: 8 }}>Connecting...</Text>
+            </View>
+          )}
+          {status === 'live' && isHost && (
+            <>
+              <Pressable onPress={toggleMic} style={[s.outlineBtn, !micOn && { borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.1)' }]}>
+                <Text style={s.outlineBtnTxt}>{micOn ? '🎙 Mute Mic' : '🔇 Unmute Mic'}</Text>
+              </Pressable>
+              <Pressable onPress={leave} style={[s.outlineBtn, { borderColor: '#ef4444' }]}>
+                <Text style={[s.outlineBtnTxt, { color: '#ef4444' }]}>End Session</Text>
+              </Pressable>
+            </>
+          )}
+          {status === 'live' && !isHost && (
+            <Pressable onPress={leave} style={s.outlineBtn}>
+              <Text style={s.outlineBtnTxt}>Leave</Text>
+            </Pressable>
+          )}
+        </View>
+
+        {isHost && status === 'idle' && (
+          <View style={s.setupNote}>
+            <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: '600', marginBottom: 4 }}>One-time setup required</Text>
+            <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, lineHeight: 18 }}>
+              Deploy the token server via Supabase Edge Functions before going live.
+            </Text>
+          </View>
+        )}
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const s = StyleSheet.create({
+  root: { flex: 1 },
+  body: { flex: 1, paddingHorizontal: 20, paddingTop: 16 },
+  liveRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
+  liveDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#ef4444', marginRight: 8 },
+  liveTxt: { color: '#ef4444', fontWeight: '800', fontSize: 13, letterSpacing: 2, marginRight: 12 },
+  listenerTxt: { color: 'rgba(255,255,255,0.5)', fontSize: 13 },
+  lotCard: { backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', borderRadius: 20, padding: 16, marginBottom: 20 },
+  lotLabel: { color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: '700', letterSpacing: 1.5, marginBottom: 4 },
+  lotTitle: { color: '#fff', fontSize: 18, fontWeight: '700' },
+  lotBid: { color: Colors.primary, fontSize: 26, fontWeight: '800', marginTop: 8 },
+  bidBtn: { backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 12, alignItems: 'center', marginTop: 14 },
+  bidBtnTxt: { color: '#fff', fontWeight: '700', fontSize: 15 },
+  visualiser: { alignItems: 'center', marginBottom: 28 },
+  micStatus: { color: 'rgba(255,255,255,0.4)', fontSize: 12, marginTop: 8 },
+  errorBox: { backgroundColor: 'rgba(220,38,38,0.15)', borderWidth: 1, borderColor: 'rgba(220,38,38,0.3)', borderRadius: 12, padding: 12, marginBottom: 14 },
+  errorTxt: { color: '#f87171', fontSize: 13 },
+  actionBtn: { backgroundColor: Colors.primary, borderRadius: 18, paddingVertical: 16, alignItems: 'center' },
+  actionBtnTxt: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  joiningBox: { backgroundColor: 'rgba(11,95,255,0.15)', borderRadius: 18, paddingVertical: 16, alignItems: 'center' },
+  outlineBtn: { borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', borderRadius: 18, paddingVertical: 16, alignItems: 'center' },
+  outlineBtnTxt: { color: 'rgba(255,255,255,0.8)', fontWeight: '700', fontSize: 15 },
+  setupNote: { marginTop: 28, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 14, padding: 14 },
+});

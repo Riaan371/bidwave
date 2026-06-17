@@ -1,25 +1,52 @@
 {
   "expo": {
-    "name": "bidwave",
+    "name": "BidWave",
     "slug": "bidwave",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "co.za.bidwave.app"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0B5FFF",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "co.za.bidwave.app"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    }
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "static",
+      "name": "BidWave",
+      "shortName": "BidWave",
+      "description": "South Africa's live & timed auction marketplace. Bid on vehicles, livestock, property, electronics and more.",
+      "themeColor": "#0B5FFF",
+      "backgroundColor": "#0B5FFF",
+      "display": "standalone",
+      "orientation": "any",
+      "scope": "/",
+      "startUrl": "/",
+      "lang": "en-ZA",
+      "dir": "ltr",
+      "preferRelatedApplications": false
+    },
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "BidWave needs photo access to upload lot images."
+        }
+      ]
+    ],
+    "scheme": "bidwave"
   }
 }

@@ -1,0 +1,76 @@
+env: load .env
+env: export EXPO_PUBLIC_SUPABASE_ANON_KEY EXPO_PUBLIC_SUPABASE_URL
+Starting project at C:\Users\payro\bidwave
+Metro is running in CI mode, reloads are disabled. Remove CI=true to enable watch mode.
+Starting Metro Bundler
+
+warning: Bundler cache is empty, rebuilding (this may take a minute)
+Waiting on http://localhost:8095
+Logs for your project will appear below.
+Web Bundled 21812ms node_modules\expo-router\entry.js (1344 modules)
+Web Bundled 10229ms node_modules\expo-router\entry.js (1339 modules)
+Web  INFO  %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+Web  LOG  Running application "main" with appParams:
+ {"hydrate": undefined, "rootTag": "#root"} 
+Development-level warnings: ON.
+Performance optimizations: OFF.
+Web  WARN  An error occurred in the <ContextNavigator> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+Web  ERROR  [ReanimatedError: [Reanimated] Your installed version of Worklets (0.9.2) is not compatible with installed version of Reanimated (4.3.1). Please install the latest supported version of Worklets 0.8.x or older. See the documentation for the list of supported versions: https://docs.swmansion.com/react-native-reanimated/docs/guides/compatibility/#supported-react-native-worklets-versions] 
+
+Code: LotCard.tsx
+[0m [90m 1 |[39m [36mimport[39m { [33mView[39m[33m,[39m [33mText[39m[33m,[39m [33mImage[39m[33m,[39m [33mPressable[39m } [36mfrom[39m [32m'react-native'[39m[33m;[39m
+[31m[1m>[22m[39m[90m 2 |[39m [36mimport[39m [33mAnimated[39m[33m,[39m { [33mFadeInDown[39m } [36mfrom[39m [32m'react-native-reanimated'[39m[33m;[39m
+ [90m   |[39m [31m[1m^[22m[39m
+ [90m 3 |[39m [36mimport[39m { router } [36mfrom[39m [32m'expo-router'[39m[33m;[39m
+ [90m 4 |[39m [36mimport[39m { useMutation[33m,[39m useQueryClient } [36mfrom[39m [32m'@tanstack/react-query'[39m[33m;[39m
+ [90m 5 |[39m [36mimport[39m { supabase } [36mfrom[39m [32m'../lib/supabase'[39m[33m;[39m[0m
+Call Stack
+  <global> (components\LotCard.tsx:2)
+  <global> (app\(tabs)\index.tsx:8)
+Web Bundled 292ms node_modules\expo-router\entry.js (1 module)
+Web  INFO  %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+Web  LOG  Running application "main" with appParams:
+ {"hydrate": undefined, "rootTag": "#root"} 
+Development-level warnings: ON.
+Performance optimizations: OFF.
+Web  WARN  An error occurred in the <ContextNavigator> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+Web  ERROR  [ReanimatedError: [Reanimated] Your installed version of Worklets (0.9.2) is not compatible with installed version of Reanimated (4.3.1). Please install the latest supported version of Worklets 0.8.x or older. See the documentation for the list of supported versions: https://docs.swmansion.com/react-native-reanimated/docs/guides/compatibility/#supported-react-native-worklets-versions] 
+
+Code: LotCard.tsx
+[0m [90m 1 |[39m [36mimport[39m { [33mView[39m[33m,[39m [33mText[39m[33m,[39m [33mImage[39m[33m,[39m [33mPressable[39m } [36mfrom[39m [32m'react-native'[39m[33m;[39m
+[31m[1m>[22m[39m[90m 2 |[39m [36mimport[39m [33mAnimated[39m[33m,[39m { [33mFadeInDown[39m } [36mfrom[39m [32m'react-native-reanimated'[39m[33m;[39m
+ [90m   |[39m [31m[1m^[22m[39m
+ [90m 3 |[39m [36mimport[39m { router } [36mfrom[39m [32m'expo-router'[39m[33m;[39m
+ [90m 4 |[39m [36mimport[39m { useMutation[33m,[39m useQueryClient } [36mfrom[39m [32m'@tanstack/react-query'[39m[33m;[39m
+ [90m 5 |[39m [36mimport[39m { supabase } [36mfrom[39m [32m'../lib/supabase'[39m[33m;[39m[0m
+Call Stack
+  <global> (components\LotCard.tsx:2)
+  <global> (app\(tabs)\index.tsx:8)
+Web Bundled 213ms node_modules\expo-router\entry.js (1 module)
+Web  INFO  %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+Web  LOG  Running application "main" with appParams:
+ {"hydrate": undefined, "rootTag": "#root"} 
+Development-level warnings: ON.
+Performance optimizations: OFF.
+Web  WARN  An error occurred in the <ContextNavigator> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+Web  ERROR  [ReanimatedError: [Reanimated] Your installed version of Worklets (0.9.2) is not compatible with installed version of Reanimated (4.3.1). Please install the latest supported version of Worklets 0.8.x or older. See the documentation for the list of supported versions: https://docs.swmansion.com/react-native-reanimated/docs/guides/compatibility/#supported-react-native-worklets-versions] 
+
+Code: LotCard.tsx
+[0m [90m 1 |[39m [36mimport[39m { [33mView[39m[33m,[39m [33mText[39m[33m,[39m [33mImage[39m[33m,[39m [33mPressable[39m } [36mfrom[39m [32m'react-native'[39m[33m;[39m
+[31m[1m>[22m[39m[90m 2 |[39m [36mimport[39m [33mAnimated[39m[33m,[39m { [33mFadeInDown[39m } [36mfrom[39m [32m'react-native-reanimated'[39m[33m;[39m
+ [90m   |[39m [31m[1m^[22m[39m
+ [90m 3 |[39m [36mimport[39m { router } [36mfrom[39m [32m'expo-router'[39m[33m;[39m
+ [90m 4 |[39m [36mimport[39m { useMutation[33m,[39m useQueryClient } [36mfrom[39m [32m'@tanstack/react-query'[39m[33m;[39m
+ [90m 5 |[39m [36mimport[39m { supabase } [36mfrom[39m [32m'../lib/supabase'[39m[33m;[39m[0m
+Call Stack
+  <global> (components\LotCard.tsx:2)
+  <global> (app\(tabs)\index.tsx:8)

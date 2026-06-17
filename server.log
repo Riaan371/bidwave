@@ -1,0 +1,12 @@
+env: load .env
+env: export AGORA_APP_CERTIFICATE EXPO_PUBLIC_AGORA_APP_ID EXPO_PUBLIC_SUPABASE_ANON_KEY EXPO_PUBLIC_SUPABASE_URL
+Starting project at C:\Users\payro\bidwave
+Starting Metro Bundler
+
+Waiting on http://localhost:8095
+An update for expo is available: 56.0.11 → ~56.0.12
+3 other packages may need updating. Run npx expo install --check for details.
+Logs for your project will appear below.
+Web Bundled 9877ms node_modules\expo-router\entry.js (1255 modules)
+Web Bundled 4054ms node_modules\expo-router\entry.js (1 module)
+Web Bundled 26194ms node_modules\agora-rtc-sdk-ng\AgoraRTC_N-production.js (1 module)

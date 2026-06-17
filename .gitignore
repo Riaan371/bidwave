@@ -36,6 +36,13 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+# logs
+*.log
+.metro.log
+server.log
+CUsers*
+
 # generated native folders
 /ios
 /android
+.env
