@@ -6,26 +6,6 @@ import { useAuthStore } from '../../lib/auth-store';
 import { useThemeStore } from '../../lib/theme-store';
 import { supabase } from '../../lib/supabase';
 
-function GoLiveButton({ userId }: { userId: string }) {
-  const { data: auctions } = useQuery({
-    queryKey: ['auctioneer-auctions', userId],
-    queryFn: async () => {
-      const { data } = await supabase.from('auctions').select('id, title').eq('auctioneer_id', userId).eq('status', 'active').limit(5);
-      return data ?? [];
-    },
-  });
-  const auction = auctions?.[0];
-  if (!auction) return null;
-  return (
-    <Pressable
-      onPress={() => router.push(`/live/${auction.id}`)}
-      style={[s.btn, { backgroundColor: '#DC2626', flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }]}
-    >
-      <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#fff', marginRight: 8 }} />
-      <Text style={[s.btnText, { color: '#fff' }]}>Go Live — {auction.title}</Text>
-    </Pressable>
-  );
-}
 
 function SessionLotNames({ lotIds, ink, muted }: { lotIds: string[]; ink: string; muted: string }) {
   const { data: lots } = useQuery({
@@ -80,7 +60,6 @@ function AuctioneerPanel({ userId, ink, muted, card, border }: { userId: string;
       <Pressable onPress={() => router.push('/schedule-live')} style={[s.btn, { backgroundColor: '#DC2626', marginBottom: 12 }]}>
         <Text style={[s.btnText, { color: '#fff' }]}>🔴 Schedule / Go Live</Text>
       </Pressable>
-      <GoLiveButton userId={userId} />
 
       {sessions && sessions.length > 0 && (
         <View style={[{ borderWidth: 1, borderRadius: 14, padding: 14, marginTop: 12 }, { borderColor: border, backgroundColor: card }]}>
