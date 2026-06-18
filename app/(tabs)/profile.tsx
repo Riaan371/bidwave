@@ -44,18 +44,12 @@ function AuctioneerPanel({ userId, ink, muted, card, border }: { userId: string;
   });
 
   const deleteSession = async (id: string) => {
-    Alert.alert('Delete session?', 'This will remove the announcement from the home screen.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete', style: 'destructive', onPress: async () => {
-          await supabase.from('live_sessions').delete().eq('id', id);
-          queryClient.invalidateQueries({ queryKey: ['my-sessions'] });
-          queryClient.invalidateQueries({ queryKey: ['scheduled-sessions'] });
-          queryClient.invalidateQueries({ queryKey: ['live-sessions'] });
-          refetch();
-        },
-      },
-    ]);
+    const { error } = await supabase.from('live_sessions').delete().eq('id', id);
+    if (error) { Alert.alert('Error', error.message); return; }
+    queryClient.invalidateQueries({ queryKey: ['my-sessions'] });
+    queryClient.invalidateQueries({ queryKey: ['scheduled-sessions'] });
+    queryClient.invalidateQueries({ queryKey: ['live-sessions'] });
+    refetch();
   };
 
   return (
