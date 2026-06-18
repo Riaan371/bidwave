@@ -45,6 +45,17 @@ async function fetchLiveSessions(): Promise<{ auction_id: string; auctions: { ti
   return (data ?? []) as any;
 }
 
+async function fetchScheduledSessions(): Promise<{ auction_id: string; title: string | null; scheduled_at: string | null }[]> {
+  const { data } = await supabase
+    .from('live_sessions')
+    .select('auction_id, title, scheduled_at')
+    .eq('status', 'scheduled')
+    .gte('scheduled_at', new Date().toISOString())
+    .order('scheduled_at')
+    .limit(3);
+  return (data ?? []) as any;
+}
+
 export default function Home() {
   const session = useAuthStore((s) => s.session);
   const profile = useAuthStore((s) => s.profile);
@@ -55,6 +66,9 @@ export default function Home() {
   });
   const { data: liveSessions } = useQuery({
     queryKey: ['live-sessions'], queryFn: fetchLiveSessions, refetchInterval: 10000,
+  });
+  const { data: scheduledSessions } = useQuery({
+    queryKey: ['scheduled-sessions'], queryFn: fetchScheduledSessions, refetchInterval: 30000,
   });
   const { data: watchedIds } = useQuery({
     queryKey: ['watchlist', session?.user.id],
@@ -99,6 +113,26 @@ export default function Home() {
                     <Text style={{ fontSize: 20 }}>🔊</Text>
                   </Pressable>
                 ))}
+              </View>
+            )}
+
+            {/* Upcoming live auctions */}
+            {scheduledSessions && scheduledSessions.length > 0 && (
+              <View style={{ marginHorizontal: 16, marginBottom: 14 }}>
+                {scheduledSessions.map((ls, i) => {
+                  const dt = ls.scheduled_at ? new Date(ls.scheduled_at) : null;
+                  const dateStr = dt ? dt.toLocaleDateString('en-ZA', { weekday: 'long', day: 'numeric', month: 'long' }) + ' at ' + dt.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' }) : '';
+                  return (
+                    <View key={i} style={s.upcomingBanner}>
+                      <Text style={{ fontSize: 20, marginRight: 10 }}>📅</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={s.upcomingTitle}>Upcoming Live Auction</Text>
+                        <Text style={s.upcomingName}>{ls.title ?? 'Live Auction'}</Text>
+                        {dateStr ? <Text style={s.upcomingDate}>{dateStr}</Text> : null}
+                      </View>
+                    </View>
+                  );
+                })}
               </View>
             )}
 
@@ -187,6 +221,10 @@ const s = StyleSheet.create({
   heroSub: { color: 'rgba(255,255,255,0.75)', fontSize: 13, marginBottom: 2 },
   heroTitle: { color: '#fff', fontSize: 32, fontWeight: '800', marginBottom: 4 },
   heroCaption: { color: 'rgba(255,255,255,0.75)', fontSize: 13 },
+  upcomingBanner: { backgroundColor: 'rgba(11,95,255,0.12)', borderWidth: 1, borderColor: 'rgba(11,95,255,0.25)', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  upcomingTitle: { color: Colors.primary, fontWeight: '700', fontSize: 11, letterSpacing: 1, textTransform: 'uppercase' },
+  upcomingName: { color: '#0F172A', fontWeight: '700', fontSize: 14, marginTop: 2 },
+  upcomingDate: { color: 'rgba(15,23,42,0.6)', fontSize: 12, marginTop: 2 },
   liveBanner: { backgroundColor: '#DC2626', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center' },
   liveDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#fff', marginRight: 12 },
   liveTxt: { color: '#fff', fontWeight: '800', fontSize: 13 },

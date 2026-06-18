@@ -110,10 +110,16 @@ export default function Profile() {
         {profile.role === 'auctioneer' && (
           <>
             <Pressable
-              onPress={() => router.push('/create-lot')}
+              onPress={() => router.push('/manage-lots')}
               style={[s.btn, { backgroundColor: '#0B5FFF', marginBottom: 12 }]}
             >
-              <Text style={[s.btnText, { color: '#fff' }]}>+ Create New Lot</Text>
+              <Text style={[s.btnText, { color: '#fff' }]}>📦 Manage Lots</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => router.push('/schedule-live')}
+              style={[s.btn, { backgroundColor: '#DC2626', marginBottom: 12 }]}
+            >
+              <Text style={[s.btnText, { color: '#fff' }]}>🔴 Schedule / Go Live</Text>
             </Pressable>
             <View style={{ marginBottom: 12 }}>
               <GoLiveButton userId={session.user.id} />

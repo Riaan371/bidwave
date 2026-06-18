@@ -1,4 +1,4 @@
-import { View, Text, Pressable, ActivityIndicator, Alert, Platform, StyleSheet } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, Alert, Platform, StyleSheet, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -29,17 +29,52 @@ export default function LiveRoom() {
   const [listenerCount, setListenerCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
-  const { data: currentLot } = useQuery({
-    queryKey: ['live-lot', auctionId],
+  const [lotIndex, setLotIndex] = useState(0);
+
+  const { data: liveSession } = useQuery({
+    queryKey: ['live-session-detail', auctionId],
     queryFn: async () => {
       const { data } = await supabase
-        .from('lots').select('id, title, current_bid, starting_bid')
+        .from('live_sessions').select('lot_ids, current_lot_index, title')
+        .eq('auction_id', auctionId).eq('status', 'live').maybeSingle();
+      return data;
+    },
+    refetchInterval: 3000,
+    onSuccess: (data) => { if (data?.current_lot_index != null) setLotIndex(data.current_lot_index); },
+  });
+
+  const activeLotId = liveSession?.lot_ids?.[lotIndex] ?? null;
+
+  const { data: currentLot } = useQuery({
+    queryKey: ['live-lot', auctionId, activeLotId],
+    queryFn: async () => {
+      if (activeLotId) {
+        const { data } = await supabase.from('lots').select('id, title, current_bid, starting_bid, photos').eq('id', activeLotId).single();
+        return data;
+      }
+      const { data } = await supabase
+        .from('lots').select('id, title, current_bid, starting_bid, photos')
         .eq('auction_id', auctionId).is('winner_id', null)
         .order('created_at').limit(1).maybeSingle();
       return data;
     },
-    refetchInterval: 5000,
+    refetchInterval: 4000,
   });
+
+  const totalLots = liveSession?.lot_ids?.length ?? 0;
+
+  async function nextLot() {
+    const next = lotIndex + 1;
+    if (next >= totalLots) { Alert.alert('Last lot', 'No more lots in this session.'); return; }
+    setLotIndex(next);
+    await supabase.from('live_sessions').update({ current_lot_index: next }).eq('auction_id', auctionId).eq('status', 'live');
+  }
+
+  async function prevLot() {
+    const prev = Math.max(0, lotIndex - 1);
+    setLotIndex(prev);
+    await supabase.from('live_sessions').update({ current_lot_index: prev }).eq('auction_id', auctionId).eq('status', 'live');
+  }
 
   useEffect(() => {
     const channel = supabase
@@ -138,13 +173,32 @@ export default function LiveRoom() {
         {/* Current lot */}
         {currentLot && (
           <View style={s.lotCard}>
-            <Text style={s.lotLabel}>NOW ON THE BLOCK</Text>
-            <Text style={s.lotTitle}>{currentLot.title}</Text>
-            <Text style={s.lotBid}>{formatZAR(currentLot.current_bid ?? currentLot.starting_bid)}</Text>
-            {session && (
-              <Pressable onPress={() => router.push(`/lot/${currentLot.id}`)} style={s.bidBtn}>
-                <Text style={s.bidBtnTxt}>Place a Bid</Text>
-              </Pressable>
+            {currentLot.photos?.[0] ? (
+              <Image source={{ uri: currentLot.photos[0] }} style={s.lotPhoto} resizeMode="cover" />
+            ) : null}
+            <View style={{ padding: 14 }}>
+              {totalLots > 1 && (
+                <Text style={s.lotCounter}>LOT {lotIndex + 1} OF {totalLots}</Text>
+              )}
+              <Text style={s.lotLabel}>NOW ON THE BLOCK</Text>
+              <Text style={s.lotTitle}>{currentLot.title}</Text>
+              <Text style={s.lotBid}>{formatZAR(currentLot.current_bid ?? currentLot.starting_bid)}</Text>
+              {session && (
+                <Pressable onPress={() => router.push(`/lot/${currentLot.id}`)} style={s.bidBtn}>
+                  <Text style={s.bidBtnTxt}>Place a Bid</Text>
+                </Pressable>
+              )}
+            </View>
+            {/* Auctioneer lot navigation */}
+            {isHost && status === 'live' && totalLots > 1 && (
+              <View style={s.lotNav}>
+                <Pressable onPress={prevLot} disabled={lotIndex === 0} style={[s.navBtn, { opacity: lotIndex === 0 ? 0.3 : 1 }]}>
+                  <Text style={s.navBtnTxt}>← Prev</Text>
+                </Pressable>
+                <Pressable onPress={nextLot} disabled={lotIndex >= totalLots - 1} style={[s.navBtn, { opacity: lotIndex >= totalLots - 1 ? 0.3 : 1 }]}>
+                  <Text style={s.navBtnTxt}>Next →</Text>
+                </Pressable>
+              </View>
             )}
           </View>
         )}
@@ -220,12 +274,17 @@ const s = StyleSheet.create({
   liveDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#ef4444', marginRight: 8 },
   liveTxt: { color: '#ef4444', fontWeight: '800', fontSize: 13, letterSpacing: 2, marginRight: 12 },
   listenerTxt: { color: 'rgba(255,255,255,0.5)', fontSize: 13 },
-  lotCard: { backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', borderRadius: 20, padding: 16, marginBottom: 20 },
+  lotCard: { backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', borderRadius: 20, overflow: 'hidden', marginBottom: 20 },
+  lotPhoto: { width: '100%', height: 180 },
+  lotCounter: { color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: '700', letterSpacing: 1.5, marginBottom: 2 },
   lotLabel: { color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: '700', letterSpacing: 1.5, marginBottom: 4 },
   lotTitle: { color: '#fff', fontSize: 18, fontWeight: '700' },
   lotBid: { color: Colors.primary, fontSize: 26, fontWeight: '800', marginTop: 8 },
   bidBtn: { backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 12, alignItems: 'center', marginTop: 14 },
   bidBtnTxt: { color: '#fff', fontWeight: '700', fontSize: 15 },
+  lotNav: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 14, paddingBottom: 14, gap: 10 },
+  navBtn: { flex: 1, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
+  navBtnTxt: { color: '#fff', fontWeight: '700', fontSize: 14 },
   visualiser: { alignItems: 'center', marginBottom: 28 },
   micStatus: { color: 'rgba(255,255,255,0.4)', fontSize: 12, marginTop: 8 },
   errorBox: { backgroundColor: 'rgba(220,38,38,0.15)', borderWidth: 1, borderColor: 'rgba(220,38,38,0.3)', borderRadius: 12, padding: 12, marginBottom: 14 },
