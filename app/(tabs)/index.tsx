@@ -45,15 +45,37 @@ async function fetchLiveSessions(): Promise<{ auction_id: string; auctions: { ti
   return (data ?? []) as any;
 }
 
-async function fetchScheduledSessions(): Promise<{ auction_id: string; title: string | null; scheduled_at: string | null }[]> {
+async function fetchScheduledSessions(): Promise<{ auction_id: string; title: string | null; scheduled_at: string | null; lot_ids: string[] | null }[]> {
   const { data } = await supabase
     .from('live_sessions')
-    .select('auction_id, title, scheduled_at')
+    .select('auction_id, title, scheduled_at, lot_ids')
     .eq('status', 'scheduled')
     .gte('scheduled_at', new Date().toISOString())
     .order('scheduled_at')
     .limit(3);
   return (data ?? []) as any;
+}
+
+function SessionLotList({ lotIds }: { lotIds: string[] }) {
+  const { data: lots } = useQuery({
+    queryKey: ['session-lots', lotIds.join(',')],
+    queryFn: async () => {
+      if (!lotIds.length) return [];
+      const { data } = await supabase.from('lots').select('id, title').in('id', lotIds);
+      return data ?? [];
+    },
+    enabled: lotIds.length > 0,
+  });
+  if (!lots?.length) return null;
+  return (
+    <View style={{ marginTop: 6 }}>
+      {lots.map((l, i) => (
+        <Text key={l.id} style={{ color: '#DC2626', fontSize: 11, fontWeight: '600' }}>
+          {i + 1}. {l.title}
+        </Text>
+      ))}
+    </View>
+  );
 }
 
 export default function Home() {
@@ -131,6 +153,9 @@ export default function Home() {
                         <Text style={s.upcomingTitle}>🔴 LIVE AUCTION SCHEDULED</Text>
                         <Text style={s.upcomingName}>{ls.title ?? 'Live Auction'}</Text>
                         {dateStr ? <Text style={s.upcomingDate}>📅 {dateStr}</Text> : null}
+                        {ls.lot_ids && ls.lot_ids.length > 0 && (
+                          <SessionLotList lotIds={ls.lot_ids} />
+                        )}
                       </View>
                     </View>
                   );

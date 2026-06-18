@@ -27,6 +27,26 @@ function GoLiveButton({ userId }: { userId: string }) {
   );
 }
 
+function SessionLotNames({ lotIds, ink, muted }: { lotIds: string[]; ink: string; muted: string }) {
+  const { data: lots } = useQuery({
+    queryKey: ['profile-session-lots', lotIds.join(',')],
+    queryFn: async () => {
+      const { data } = await supabase.from('lots').select('id, title').in('id', lotIds);
+      return data ?? [];
+    },
+    enabled: lotIds.length > 0,
+  });
+  if (!lots?.length) return null;
+  return (
+    <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(150,150,150,0.15)' }}>
+      <Text style={{ color: muted, fontSize: 11, fontWeight: '700', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>Lots on the block</Text>
+      {lots.map((l, i) => (
+        <Text key={l.id} style={{ color: ink, fontSize: 12, marginBottom: 2 }}>{i + 1}. {l.title}</Text>
+      ))}
+    </View>
+  );
+}
+
 function AuctioneerPanel({ userId, ink, muted, card, border }: { userId: string; ink: string; muted: string; card: string; border: string }) {
   const queryClient = useQueryClient();
 
@@ -35,7 +55,7 @@ function AuctioneerPanel({ userId, ink, muted, card, border }: { userId: string;
     queryFn: async () => {
       const { data } = await supabase
         .from('live_sessions')
-        .select('id, title, status, scheduled_at')
+        .select('id, title, status, scheduled_at, lot_ids')
         .eq('auctioneer_id', userId)
         .in('status', ['scheduled', 'live'])
         .order('scheduled_at', { ascending: true });
@@ -67,16 +87,21 @@ function AuctioneerPanel({ userId, ink, muted, card, border }: { userId: string;
           <Text style={{ color: ink, fontWeight: '700', fontSize: 14, marginBottom: 10 }}>Scheduled Sessions</Text>
           {sessions.map((s2) => {
             const dt = s2.scheduled_at ? new Date(s2.scheduled_at) : null;
-            const dateStr = dt ? dt.toLocaleDateString('en-ZA', { weekday: 'short', day: 'numeric', month: 'short' }) + ' ' + dt.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' }) : 'Live now';
+            const dateStr = dt ? dt.toLocaleDateString('en-ZA', { weekday: 'short', day: 'numeric', month: 'short' }) + ' at ' + dt.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' }) : 'Live now';
             return (
-              <View key={s2.id} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: ink, fontWeight: '600', fontSize: 13 }}>{s2.title ?? 'Untitled'}</Text>
-                  <Text style={{ color: muted, fontSize: 12 }}>{dateStr}</Text>
+              <View key={s2.id} style={{ borderWidth: 1, borderColor: border, borderRadius: 10, padding: 10, marginBottom: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: ink, fontWeight: '700', fontSize: 14 }}>{s2.title ?? 'Untitled'}</Text>
+                    <Text style={{ color: '#DC2626', fontSize: 12, fontWeight: '600', marginTop: 2 }}>📅 {dateStr}</Text>
+                  </View>
+                  <Pressable onPress={() => deleteSession(s2.id)} style={{ paddingHorizontal: 10, paddingVertical: 5, backgroundColor: 'rgba(220,38,38,0.1)', borderRadius: 8, marginLeft: 8 }}>
+                    <Text style={{ color: '#DC2626', fontWeight: '700', fontSize: 12 }}>Delete</Text>
+                  </Pressable>
                 </View>
-                <Pressable onPress={() => deleteSession(s2.id)} style={{ paddingHorizontal: 12, paddingVertical: 6, backgroundColor: 'rgba(220,38,38,0.1)', borderRadius: 8 }}>
-                  <Text style={{ color: '#DC2626', fontWeight: '700', fontSize: 13 }}>Delete</Text>
-                </Pressable>
+                {s2.lot_ids && s2.lot_ids.length > 0 && (
+                  <SessionLotNames lotIds={s2.lot_ids} ink={ink} muted={muted} />
+                )}
               </View>
             );
           })}
