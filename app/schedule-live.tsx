@@ -61,9 +61,7 @@ export default function ScheduleLive() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['live-sessions'] });
       queryClient.invalidateQueries({ queryKey: ['scheduled-sessions'] });
-      Alert.alert('Scheduled!', 'Your live auction has been scheduled. Bidders will see the announcement on the home screen.', [
-        { text: 'Done', onPress: () => router.replace('/(tabs)/profile') },
-      ]);
+      router.replace('/(tabs)/');
     },
     onError: (e: any) => Alert.alert('Error', e.message),
   });

@@ -124,11 +124,13 @@ export default function Home() {
                   const dateStr = dt ? dt.toLocaleDateString('en-ZA', { weekday: 'long', day: 'numeric', month: 'long' }) + ' at ' + dt.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' }) : '';
                   return (
                     <View key={i} style={s.upcomingBanner}>
-                      <Text style={{ fontSize: 20, marginRight: 10 }}>📅</Text>
+                      <View style={{ marginRight: 12 }}>
+                        <View style={s.upcomingDot} />
+                      </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={s.upcomingTitle}>Upcoming Live Auction</Text>
+                        <Text style={s.upcomingTitle}>🔴 LIVE AUCTION SCHEDULED</Text>
                         <Text style={s.upcomingName}>{ls.title ?? 'Live Auction'}</Text>
-                        {dateStr ? <Text style={s.upcomingDate}>{dateStr}</Text> : null}
+                        {dateStr ? <Text style={s.upcomingDate}>📅 {dateStr}</Text> : null}
                       </View>
                     </View>
                   );
@@ -221,10 +223,11 @@ const s = StyleSheet.create({
   heroSub: { color: 'rgba(255,255,255,0.75)', fontSize: 13, marginBottom: 2 },
   heroTitle: { color: '#fff', fontSize: 32, fontWeight: '800', marginBottom: 4 },
   heroCaption: { color: 'rgba(255,255,255,0.75)', fontSize: 13 },
-  upcomingBanner: { backgroundColor: 'rgba(11,95,255,0.12)', borderWidth: 1, borderColor: 'rgba(11,95,255,0.25)', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  upcomingTitle: { color: Colors.primary, fontWeight: '700', fontSize: 11, letterSpacing: 1, textTransform: 'uppercase' },
-  upcomingName: { color: '#0F172A', fontWeight: '700', fontSize: 14, marginTop: 2 },
-  upcomingDate: { color: 'rgba(15,23,42,0.6)', fontSize: 12, marginTop: 2 },
+  upcomingBanner: { backgroundColor: '#FEF2F2', borderWidth: 1.5, borderColor: '#DC2626', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  upcomingDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#DC2626' },
+  upcomingTitle: { color: '#DC2626', fontWeight: '800', fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 2 },
+  upcomingName: { color: '#0F172A', fontWeight: '700', fontSize: 15, marginTop: 2 },
+  upcomingDate: { color: '#DC2626', fontSize: 12, fontWeight: '600', marginTop: 4 },
   liveBanner: { backgroundColor: '#DC2626', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center' },
   liveDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#fff', marginRight: 12 },
   liveTxt: { color: '#fff', fontWeight: '800', fontSize: 13 },
