@@ -34,7 +34,6 @@ export default function ScheduleLive() {
     mutationFn: async () => {
       if (!session) throw new Error('Not logged in');
       if (!title.trim()) throw new Error('Please enter a session title');
-      if (pickedLots.length === 0) throw new Error('Select at least one lot');
 
       let scheduledAt: string | null = null;
       if (date && time) {
