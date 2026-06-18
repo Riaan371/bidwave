@@ -80,6 +80,15 @@ export default function LotDetail() {
     }
   }, [lot?.current_bid, lot?.starting_bid]);
 
+  const endLiveSession = async () => {
+    await supabase.from('live_sessions')
+      .update({ status: 'ended' })
+      .eq('auction_id', lot?.auction_id ?? '')
+      .eq('status', 'live');
+    queryClient.invalidateQueries({ queryKey: ['live-sessions'] });
+    queryClient.invalidateQueries({ queryKey: ['live-session', lot?.auction_id] });
+  };
+
   const markSold = useMutation({
     mutationFn: async () => {
       if (!bids || bids.length === 0) throw new Error('No bids placed yet.');
@@ -91,22 +100,37 @@ export default function LotDetail() {
         no_sale: false,
       }).eq('id', id);
       if (error) throw error;
+      // Save sale record
+      await supabase.from('sales').insert({
+        lot_id: id,
+        winner_id: topBid.bidder_id,
+        sale_price: topBid.amount,
+        winner_name: topBid.users?.full_name ?? null,
+        sold_at: new Date().toISOString(),
+      }).select();
+      await endLiveSession();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lot', id] });
-      Alert.alert('🔨 SOLD!', `Lot sold to ${bids?.[0]?.users?.full_name ?? 'top bidder'} for ${formatZAR(bids?.[0]?.amount)}`);
     },
-    onError: (e: any) => Alert.alert('Error', e.message),
+    onError: async (e: any) => {
+      // sales table may not exist yet — still mark lot as sold
+      if (e.message?.includes('sales')) {
+        queryClient.invalidateQueries({ queryKey: ['lot', id] });
+      } else {
+        Alert.alert('Error', e.message);
+      }
+    },
   });
 
   const markNoSale = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from('lots').update({ closed: true, no_sale: true }).eq('id', id);
       if (error) throw error;
+      await endLiveSession();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lot', id] });
-      Alert.alert('No Sale', 'Bidding closed. No sale recorded.');
     },
     onError: (e: any) => Alert.alert('Error', e.message),
   });
@@ -236,15 +260,8 @@ export default function LotDetail() {
             <View style={{ gap: 10 }}>
               <Pressable
                 onPress={() => {
-                  if (!bids?.length) { Alert.alert('No bids', 'There are no bids on this lot yet.'); return; }
-                  Alert.alert(
-                    '🔨 Mark as Sold?',
-                    `Sell to ${bids[0].users?.full_name ?? 'top bidder'} for ${formatZAR(bids[0].amount)}?`,
-                    [
-                      { text: 'Cancel', style: 'cancel' },
-                      { text: 'SOLD', onPress: () => markSold.mutate() },
-                    ]
-                  );
+                  if (!bids?.length) { Alert.alert('No bids yet', 'There are no bids on this lot.'); return; }
+                  markSold.mutate();
                 }}
                 disabled={markSold.isPending || markNoSale.isPending}
                 style={[s.soldBtn, { opacity: markSold.isPending ? 0.7 : 1 }]}
@@ -252,10 +269,7 @@ export default function LotDetail() {
                 {markSold.isPending ? <ActivityIndicator color="#fff" /> : <Text style={s.soldBtnTxt}>🔨 SOLD — Close Bidding</Text>}
               </Pressable>
               <Pressable
-                onPress={() => Alert.alert('No Sale?', 'Close bidding with no winner?', [
-                  { text: 'Cancel', style: 'cancel' },
-                  { text: 'No Sale', onPress: () => markNoSale.mutate() },
-                ])}
+                onPress={() => markNoSale.mutate()}
                 disabled={markSold.isPending || markNoSale.isPending}
                 style={[s.noSaleBtn, { opacity: markNoSale.isPending ? 0.7 : 1 }]}
               >
