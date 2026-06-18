@@ -246,15 +246,23 @@ export default function LotDetail() {
       {isAuctioneer && (
         <View style={[s.footer, { backgroundColor: card, borderTopColor: border }]}>
           {isClosed ? (
-            <View style={[s.soldBadge, isNoSale && { borderColor: '#D97706', backgroundColor: 'rgba(217,119,6,0.1)' }]}>
-              <Text style={[s.soldTxt, isNoSale && { color: '#D97706' }]}>
-                {isNoSale ? '🚫 No Sale — Bidding Closed' : `🔨 SOLD — ${formatZAR(lot.current_bid)}`}
-              </Text>
-              {!isNoSale && (
-                <Text style={{ color: '#16A34A', fontSize: 12, textAlign: 'center', marginTop: 4 }}>
-                  Winner: {bids?.[0]?.users?.full_name ?? 'Top bidder'}
+            <View style={{ gap: 10 }}>
+              <View style={[s.soldBadge, isNoSale && { borderColor: '#D97706', backgroundColor: 'rgba(217,119,6,0.1)' }]}>
+                <Text style={[s.soldTxt, isNoSale && { color: '#D97706' }]}>
+                  {isNoSale ? '🚫 No Sale — Bidding Closed' : `🔨 SOLD — ${formatZAR(lot.current_bid)}`}
                 </Text>
-              )}
+                {!isNoSale && (
+                  <Text style={{ color: '#16A34A', fontSize: 12, textAlign: 'center', marginTop: 4 }}>
+                    Winner: {bids?.[0]?.users?.full_name ?? 'Top bidder'}
+                  </Text>
+                )}
+              </View>
+              <Pressable
+                onPress={() => router.push(`/live/${lot.auction_id}`)}
+                style={{ backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 14, alignItems: 'center' }}
+              >
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>▶ Next Lot — Back to Live Room</Text>
+              </Pressable>
             </View>
           ) : (
             <View style={{ gap: 10 }}>
