@@ -1,11 +1,103 @@
-import { View, Text, Pressable, Switch, ScrollView, StyleSheet, Alert } from 'react-native';
+import { View, Text, Pressable, Switch, ScrollView, StyleSheet, Alert, TextInput, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 import { useAuthStore } from '../../lib/auth-store';
 import { useThemeStore } from '../../lib/theme-store';
 import { supabase } from '../../lib/supabase';
+import { Colors } from '../../lib/theme';
 
+
+function ExportReport({ ink, muted, card, border }: { ink: string; muted: string; card: string; border: string }) {
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const exportCSV = async () => {
+    if (!fromDate || !toDate) { Alert.alert('Select both dates', 'Enter a from and to date (DD/MM/YYYY)'); return; }
+    const parseDate = (d: string) => {
+      const [day, month, year] = d.split('/');
+      return new Date(Number(year), Number(month) - 1, Number(day));
+    };
+    const from = parseDate(fromDate);
+    const to = parseDate(toDate);
+    to.setHours(23, 59, 59);
+    if (isNaN(from.getTime()) || isNaN(to.getTime())) { Alert.alert('Invalid date', 'Use DD/MM/YYYY format'); return; }
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('sales')
+        .select('sold_at, sale_price, winner_name, winner_id, lot_id, lots(title, category)')
+        .gte('sold_at', from.toISOString())
+        .lte('sold_at', to.toISOString())
+        .order('sold_at');
+
+      if (error) throw error;
+      if (!data || data.length === 0) { Alert.alert('No sales', 'No sales found for this date range.'); setLoading(false); return; }
+
+      const rows = [
+        ['Date & Time', 'Lot Title', 'Category', 'Winner Name', 'Sale Price (ZAR)'],
+        ...(data as any[]).map((s) => [
+          new Date(s.sold_at).toLocaleString('en-ZA'),
+          s.lots?.title ?? s.lot_id,
+          s.lots?.category ?? '',
+          s.winner_name ?? 'Unknown',
+          s.sale_price,
+        ]),
+      ];
+
+      // Add totals row
+      const total = (data as any[]).reduce((sum, s) => sum + Number(s.sale_price), 0);
+      rows.push(['', '', '', 'TOTAL', total]);
+
+      const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+      const filename = `BidWave_Sales_${fromDate.replace(/\//g, '-')}_to_${toDate.replace(/\//g, '-')}.csv`;
+
+      if (Platform.OS === 'web') {
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = filename; a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        Alert.alert('Export ready', 'Excel export is available on the web version of BidWave.');
+      }
+    } catch (e: any) {
+      Alert.alert('Export failed', e.message);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <View style={[{ borderWidth: 1, borderRadius: 14, padding: 14, marginBottom: 12 }, { borderColor: border, backgroundColor: card }]}>
+      <Text style={{ color: ink, fontWeight: '700', fontSize: 14, marginBottom: 12 }}>📊 Export Sales Report</Text>
+      <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: muted, fontSize: 11, fontWeight: '600', marginBottom: 4 }}>FROM (DD/MM/YYYY)</Text>
+          <TextInput
+            value={fromDate} onChangeText={setFromDate} placeholder="01/06/2026"
+            placeholderTextColor="#9CA3AF"
+            style={{ borderWidth: 1, borderColor: border, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, color: ink, fontSize: 13 }}
+          />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: muted, fontSize: 11, fontWeight: '600', marginBottom: 4 }}>TO (DD/MM/YYYY)</Text>
+          <TextInput
+            value={toDate} onChangeText={setToDate} placeholder="30/06/2026"
+            placeholderTextColor="#9CA3AF"
+            style={{ borderWidth: 1, borderColor: border, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, color: ink, fontSize: 13 }}
+          />
+        </View>
+      </View>
+      <Pressable onPress={exportCSV} disabled={loading}
+        style={{ backgroundColor: '#16A34A', borderRadius: 12, paddingVertical: 13, alignItems: 'center', opacity: loading ? 0.7 : 1 }}>
+        {loading ? <ActivityIndicator color="#fff" /> : <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>⬇ Download Excel / CSV</Text>}
+      </Pressable>
+    </View>
+  );
+}
 
 function SessionLotNames({ lotIds, ink, muted }: { lotIds: string[]; ink: string; muted: string }) {
   const { data: lots } = useQuery({
@@ -68,6 +160,8 @@ function AuctioneerPanel({ userId, ink, muted, card, border }: { userId: string;
       <Pressable onPress={() => router.push('/schedule-live')} style={[s.btn, { backgroundColor: '#DC2626', marginBottom: 12 }]}>
         <Text style={[s.btnText, { color: '#fff' }]}>🔴 Schedule / Go Live</Text>
       </Pressable>
+
+      <ExportReport ink={ink} muted={muted} card={card} border={border} />
 
       {sessions && sessions.length > 0 && (
         <View style={[{ borderWidth: 1, borderRadius: 14, padding: 14, marginTop: 12 }, { borderColor: border, backgroundColor: card }]}>
