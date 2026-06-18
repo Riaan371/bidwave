@@ -1,41 +1,41 @@
 {
-  "name": "BidWave",
-  "short_name": "BidWave",
-  "description": "South Africa's trusted live & timed auction marketplace",
+  "name": "West Coast Pickers",
+  "short_name": "WC Pickers",
+  "description": "West Coast Pickers — Live Auction Marketplace",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
-  "theme_color": "#0B5FFF",
-  "background_color": "#0B5FFF",
+  "theme_color": "#0D1B2A",
+  "background_color": "#0D1B2A",
   "lang": "en-ZA",
   "icons": [
     {
-      "src": "/icon-192.png",
+      "src": "/icon-192-v2.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon-192.png",
+      "src": "/icon-192-v2.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/icon-512.png",
+      "src": "/icon-512-v2.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon-512.png",
+      "src": "/icon-512-v2.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/icon-1024.png",
+      "src": "/icon-1024-v2.png",
       "sizes": "1024x1024",
       "type": "image/png",
       "purpose": "any"

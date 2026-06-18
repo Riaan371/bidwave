@@ -1,4 +1,4 @@
-const CACHE = 'bidwave-v3';
+const CACHE = 'bidwave-v4';
 const OFFLINE = ['/'];
 
 self.addEventListener('install', (e) => {
