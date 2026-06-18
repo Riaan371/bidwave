@@ -1,7 +1,7 @@
-import { View, Text, Pressable, Switch, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, Pressable, Switch, ScrollView, StyleSheet, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../lib/auth-store';
 import { useThemeStore } from '../../lib/theme-store';
 import { supabase } from '../../lib/supabase';
@@ -24,6 +24,71 @@ function GoLiveButton({ userId }: { userId: string }) {
       <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#fff', marginRight: 8 }} />
       <Text style={[s.btnText, { color: '#fff' }]}>Go Live — {auction.title}</Text>
     </Pressable>
+  );
+}
+
+function AuctioneerPanel({ userId, ink, muted, card, border }: { userId: string; ink: string; muted: string; card: string; border: string }) {
+  const queryClient = useQueryClient();
+
+  const { data: sessions, refetch } = useQuery({
+    queryKey: ['my-sessions', userId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('live_sessions')
+        .select('id, title, status, scheduled_at')
+        .eq('auctioneer_id', userId)
+        .in('status', ['scheduled', 'live'])
+        .order('scheduled_at', { ascending: true });
+      return data ?? [];
+    },
+  });
+
+  const deleteSession = async (id: string) => {
+    Alert.alert('Delete session?', 'This will remove the announcement from the home screen.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete', style: 'destructive', onPress: async () => {
+          await supabase.from('live_sessions').delete().eq('id', id);
+          queryClient.invalidateQueries({ queryKey: ['my-sessions'] });
+          queryClient.invalidateQueries({ queryKey: ['scheduled-sessions'] });
+          queryClient.invalidateQueries({ queryKey: ['live-sessions'] });
+          refetch();
+        },
+      },
+    ]);
+  };
+
+  return (
+    <View style={{ marginBottom: 12 }}>
+      <Pressable onPress={() => router.push('/manage-lots')} style={[s.btn, { backgroundColor: '#0B5FFF', marginBottom: 12 }]}>
+        <Text style={[s.btnText, { color: '#fff' }]}>📦 Manage Lots</Text>
+      </Pressable>
+      <Pressable onPress={() => router.push('/schedule-live')} style={[s.btn, { backgroundColor: '#DC2626', marginBottom: 12 }]}>
+        <Text style={[s.btnText, { color: '#fff' }]}>🔴 Schedule / Go Live</Text>
+      </Pressable>
+      <GoLiveButton userId={userId} />
+
+      {sessions && sessions.length > 0 && (
+        <View style={[{ borderWidth: 1, borderRadius: 14, padding: 14, marginTop: 12 }, { borderColor: border, backgroundColor: card }]}>
+          <Text style={{ color: ink, fontWeight: '700', fontSize: 14, marginBottom: 10 }}>Scheduled Sessions</Text>
+          {sessions.map((s2) => {
+            const dt = s2.scheduled_at ? new Date(s2.scheduled_at) : null;
+            const dateStr = dt ? dt.toLocaleDateString('en-ZA', { weekday: 'short', day: 'numeric', month: 'short' }) + ' ' + dt.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' }) : 'Live now';
+            return (
+              <View key={s2.id} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: ink, fontWeight: '600', fontSize: 13 }}>{s2.title ?? 'Untitled'}</Text>
+                  <Text style={{ color: muted, fontSize: 12 }}>{dateStr}</Text>
+                </View>
+                <Pressable onPress={() => deleteSession(s2.id)} style={{ paddingHorizontal: 12, paddingVertical: 6, backgroundColor: 'rgba(220,38,38,0.1)', borderRadius: 8 }}>
+                  <Text style={{ color: '#DC2626', fontWeight: '700', fontSize: 13 }}>Delete</Text>
+                </Pressable>
+              </View>
+            );
+          })}
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -108,23 +173,7 @@ export default function Profile() {
 
         {/* Auctioneer actions */}
         {profile.role === 'auctioneer' && (
-          <>
-            <Pressable
-              onPress={() => router.push('/manage-lots')}
-              style={[s.btn, { backgroundColor: '#0B5FFF', marginBottom: 12 }]}
-            >
-              <Text style={[s.btnText, { color: '#fff' }]}>📦 Manage Lots</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => router.push('/schedule-live')}
-              style={[s.btn, { backgroundColor: '#DC2626', marginBottom: 12 }]}
-            >
-              <Text style={[s.btnText, { color: '#fff' }]}>🔴 Schedule / Go Live</Text>
-            </Pressable>
-            <View style={{ marginBottom: 12 }}>
-              <GoLiveButton userId={session.user.id} />
-            </View>
-          </>
+          <AuctioneerPanel userId={session.user.id} ink={ink} muted={muted} card={card} border={border} />
         )}
 
         {/* Dark mode */}
