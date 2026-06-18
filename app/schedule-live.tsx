@@ -44,31 +44,23 @@ export default function ScheduleLive() {
         scheduledAt = dt.toISOString();
       }
 
-      const isLive = !scheduledAt;
       const lotIds = pickedLots.map((l) => l.id);
       const { error } = await supabase.from('live_sessions').insert({
         auction_id: '00000000-0000-0000-0000-0000000000a1',
         auctioneer_id: session.user.id,
         channel_name: '00000000-0000-0000-0000-0000000000a1',
-        status: isLive ? 'live' : 'scheduled',
+        status: 'scheduled',
         scheduled_at: scheduledAt,
         lot_ids: lotIds,
         current_lot_index: 0,
         title: title.trim(),
       });
       if (error) throw error;
-      return { isLive };
     },
-    onSuccess: ({ isLive }) => {
-      queryClient.invalidateQueries({ queryKey: ['live-sessions'] });
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['scheduled-sessions'] });
       queryClient.invalidateQueries({ queryKey: ['my-sessions'] });
-      if (isLive) {
-        // Drop auctioneer straight into the live room
-        router.replace('/live/00000000-0000-0000-0000-0000000000a1');
-      } else {
-        router.replace('/(tabs)/');
-      }
+      router.replace('/(tabs)/profile');
     },
     onError: (e: any) => Alert.alert('Error', e.message),
   });
@@ -77,7 +69,11 @@ export default function ScheduleLive() {
 
   return (
     <SafeAreaView style={[s.root, { backgroundColor: bg }]}>
-      <Stack.Screen options={{ headerShown: true, title: 'Schedule Live Auction', headerStyle: { backgroundColor: bg }, headerTintColor: ink }} />
+      <Stack.Screen options={{ headerShown: true, title: 'Schedule Live Auction', headerStyle: { backgroundColor: bg }, headerTintColor: ink, headerLeft: () => (
+        <Pressable onPress={() => router.back()} style={{ paddingHorizontal: 8, paddingVertical: 4 }}>
+          <Text style={{ color: ink, fontSize: 15 }}>← Back</Text>
+        </Pressable>
+      ) }} />
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
 
         <View style={[s.card, { backgroundColor: card, borderColor: border }]}>
@@ -136,7 +132,7 @@ export default function ScheduleLive() {
           style={[s.submitBtn, { opacity: schedule.isPending ? 0.7 : 1 }]}>
           {schedule.isPending
             ? <ActivityIndicator color="#fff" />
-            : <Text style={s.submitBtnTxt}>{date ? '📅 Schedule Live Auction' : '🔴 Go Live Now'}</Text>}
+            : <Text style={s.submitBtnTxt}>📅 Schedule Auction</Text>}
         </Pressable>
       </View>
     </SafeAreaView>

@@ -152,7 +152,11 @@ export default function LiveRoom() {
 
   return (
     <SafeAreaView style={[s.root, { backgroundColor: '#000' }]}>
-      <Stack.Screen options={{ headerShown: true, headerTitle: 'Live Auction', headerStyle: { backgroundColor: '#000' }, headerTintColor: '#fff' }} />
+      <Stack.Screen options={{ headerShown: true, headerTitle: 'Live Auction', headerStyle: { backgroundColor: '#000' }, headerTintColor: '#fff', headerLeft: () => (
+        <Pressable onPress={() => router.push('/(tabs)/')} style={{ paddingHorizontal: 8, paddingVertical: 4 }}>
+          <Text style={{ color: '#fff', fontSize: 15 }}>🏠 Home</Text>
+        </Pressable>
+      ) }} />
 
       <View style={s.body}>
         {/* Live indicator */}
