@@ -1,7 +1,7 @@
-import { View, Text, Image, ScrollView, Pressable, ActivityIndicator, Alert, StyleSheet, Platform } from 'react-native';
+import { View, Text, Image, ScrollView, Pressable, ActivityIndicator, Alert, StyleSheet, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, router } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../lib/auth-store';
@@ -20,6 +20,8 @@ export default function LotDetail() {
   const queryClient = useQueryClient();
   const { bg, card, border, ink, muted } = useAppTheme();
 
+  const [customBid, setCustomBid] = useState<number | null>(null);
+
   const { data: lot, isLoading } = useQuery({
     queryKey: ['lot', id],
     queryFn: async () => {
@@ -27,6 +29,7 @@ export default function LotDetail() {
       if (error) throw error;
       return data as Lot & { auctions: { end_at: string | null } | null };
     },
+    refetchInterval: 5000,
   });
 
   const { data: liveSession } = useQuery({
@@ -44,11 +47,15 @@ export default function LotDetail() {
     queryKey: ['lot', id, 'bids'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('bids').select('id, amount, placed_at').eq('lot_id', id)
-        .order('amount', { ascending: false }).limit(10);
+        .from('bids')
+        .select('id, amount, placed_at, bidder_id, users(full_name)')
+        .eq('lot_id', id)
+        .order('amount', { ascending: false })
+        .limit(20);
       if (error) throw error;
-      return data;
+      return data as { id: string; amount: number; placed_at: string; bidder_id: string; users: { full_name: string } | null }[];
     },
+    refetchInterval: 4000,
   });
 
   useEffect(() => {
@@ -59,19 +66,30 @@ export default function LotDetail() {
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bids', filter: `lot_id=eq.${id}` }, () => {
         queryClient.invalidateQueries({ queryKey: ['lot', id, 'bids'] });
+        queryClient.invalidateQueries({ queryKey: ['lot', id] });
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [id]);
 
+  // Sync customBid up when current_bid changes (someone outbids)
+  useEffect(() => {
+    if (lot) {
+      const min = (lot.current_bid ?? lot.starting_bid) + lot.increment;
+      setCustomBid((prev) => (prev === null || prev < min) ? min : prev);
+    }
+  }, [lot?.current_bid, lot?.starting_bid]);
+
   const placeBid = useMutation({
     mutationFn: async () => {
       if (!session) throw new Error('Please log in to bid.');
       if (!lot) throw new Error('Lot not loaded.');
-      const nextBid = (lot.current_bid ?? lot.starting_bid) + lot.increment;
-      const { error } = await supabase.from('bids').insert({ lot_id: lot.id, bidder_id: session.user.id, amount: nextBid });
+      const minBid = (lot.current_bid ?? lot.starting_bid) + lot.increment;
+      const bidAmount = customBid ?? minBid;
+      if (bidAmount < minBid) throw new Error(`Minimum bid is ${formatZAR(minBid)}`);
+      const { error } = await supabase.from('bids').insert({ lot_id: lot.id, bidder_id: session.user.id, amount: bidAmount });
       if (error) throw error;
-      return nextBid;
+      return bidAmount;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lot', id] });
@@ -88,12 +106,16 @@ export default function LotDetail() {
     );
   }
 
-  const nextBid = (lot.current_bid ?? lot.starting_bid) + lot.increment;
+  const minNextBid = (lot.current_bid ?? lot.starting_bid) + lot.increment;
+  const bidAmount = customBid ?? minNextBid;
+  const topBidderId = bids?.[0]?.bidder_id ?? null;
+  const isTopBidder = !!session && topBidderId === session.user.id;
+  const isAuctioneer = useAuthStore.getState().profile?.role === 'auctioneer';
 
   return (
     <SafeAreaView style={[s.root, { backgroundColor: bg }]}>
       <Stack.Screen options={{ headerShown: true, headerTitle: '', headerBackTitle: 'Back' }} />
-      <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 160 }}>
         <Image source={{ uri: lot.photos?.[0] }} style={s.heroImg} resizeMode="cover" />
 
         {liveSession && (
@@ -125,33 +147,85 @@ export default function LotDetail() {
             )}
           </View>
 
+          {/* Top bidder status */}
+          {isTopBidder && (
+            <View style={s.topBidderBadge}>
+              <Text style={s.topBidderTxt}>🏆 You are the highest bidder</Text>
+            </View>
+          )}
+
+          {/* Bid history with names */}
           <Text style={[s.historyLabel, { color: muted }]}>Bid history</Text>
           {bids && bids.length > 0 ? (
-            bids.map((b: any) => (
-              <View key={b.id} style={[s.bidHistoryRow, { borderBottomColor: border }]}>
-                <Text style={[s.bidHistoryTime, { color: muted }]}>{new Date(b.placed_at).toLocaleString('en-ZA')}</Text>
-                <Text style={[s.bidHistoryAmt, { color: ink }]}>{formatZAR(b.amount)}</Text>
-              </View>
-            ))
+            bids.map((b, i) => {
+              const name = b.users?.full_name ?? 'Anonymous';
+              const initials = name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2);
+              const isMe = session && b.bidder_id === session.user.id;
+              return (
+                <View key={b.id} style={[s.bidHistoryRow, { borderBottomColor: border }]}>
+                  <View style={[s.avatar, { backgroundColor: i === 0 ? Colors.primary : 'rgba(150,150,150,0.2)' }]}>
+                    <Text style={[s.avatarTxt, { color: i === 0 ? '#fff' : ink }]}>{initials}</Text>
+                  </View>
+                  <View style={{ flex: 1, marginLeft: 10 }}>
+                    <Text style={[{ color: ink, fontWeight: i === 0 ? '700' : '400', fontSize: 14 }]}>
+                      {isMe ? 'You' : name} {i === 0 ? '👑' : ''}
+                    </Text>
+                    <Text style={[s.bidHistoryTime, { color: muted }]}>{new Date(b.placed_at).toLocaleString('en-ZA')}</Text>
+                  </View>
+                  <Text style={[s.bidHistoryAmt, { color: i === 0 ? Colors.primary : ink, fontWeight: i === 0 ? '800' : '600' }]}>
+                    {formatZAR(b.amount)}
+                  </Text>
+                </View>
+              );
+            })
           ) : (
             <Text style={{ color: muted, fontSize: 13 }}>No bids yet — be the first.</Text>
           )}
         </View>
       </ScrollView>
 
-      <View style={[s.footer, { backgroundColor: card, borderTopColor: border }]}>
-        <Pressable
-          disabled={placeBid.isPending}
-          onPress={() => { if (!session) { router.push('/(auth)/role'); return; } placeBid.mutate(); }}
-          style={[s.bidBtn, { opacity: placeBid.isPending ? 0.8 : 1 }]}
-        >
-          {placeBid.isPending ? (
-            <ActivityIndicator color="#fff" />
+      {/* Bidding footer */}
+      {!isAuctioneer && (
+        <View style={[s.footer, { backgroundColor: card, borderTopColor: border }]}>
+          {isTopBidder ? (
+            <View style={s.topBidderFooter}>
+              <Text style={s.topBidderFooterTxt}>🏆 You're the highest bidder at {formatZAR(lot.current_bid)}</Text>
+              <Text style={{ color: muted, fontSize: 12, textAlign: 'center', marginTop: 4 }}>Place a higher bid to stay on top if outbid</Text>
+            </View>
           ) : (
-            <Text style={s.bidBtnTxt}>{session ? `Place Bid — ${formatZAR(nextBid)}` : 'Log in to place a bid'}</Text>
+            <>
+              {/* Bid amount controls */}
+              <View style={s.bidControls}>
+                <Pressable
+                  onPress={() => setCustomBid((prev) => Math.max(minNextBid, (prev ?? minNextBid) - lot.increment))}
+                  style={[s.adjustBtn, { borderColor: border }]}
+                >
+                  <Text style={[s.adjustBtnTxt, { color: ink }]}>−</Text>
+                </Pressable>
+                <View style={{ flex: 1, alignItems: 'center' }}>
+                  <Text style={{ color: muted, fontSize: 11, marginBottom: 2 }}>Your bid</Text>
+                  <Text style={{ color: ink, fontWeight: '800', fontSize: 20 }}>{formatZAR(bidAmount)}</Text>
+                </View>
+                <Pressable
+                  onPress={() => setCustomBid((prev) => (prev ?? minNextBid) + lot.increment)}
+                  style={[s.adjustBtn, { borderColor: border }]}
+                >
+                  <Text style={[s.adjustBtnTxt, { color: ink }]}>+</Text>
+                </Pressable>
+              </View>
+              <Pressable
+                disabled={placeBid.isPending}
+                onPress={() => { if (!session) { router.push('/(auth)/role'); return; } placeBid.mutate(); }}
+                style={[s.bidBtn, { opacity: placeBid.isPending ? 0.8 : 1 }]}
+              >
+                {placeBid.isPending
+                  ? <ActivityIndicator color="#fff" />
+                  : <Text style={s.bidBtnTxt}>{session ? `Place Bid — ${formatZAR(bidAmount)}` : 'Log in to place a bid'}</Text>}
+              </Pressable>
+            </>
           )}
-        </Pressable>
-      </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -164,15 +238,24 @@ const s = StyleSheet.create({
   bidRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 16, borderTopWidth: 1, paddingTop: 16 },
   bidLabel: { fontSize: 12, marginBottom: 2 },
   bidAmt: { fontSize: 26, fontWeight: '800', color: Colors.primary },
+  topBidderBadge: { backgroundColor: 'rgba(22,163,74,0.1)', borderWidth: 1, borderColor: '#16A34A', borderRadius: 10, padding: 10, marginTop: 12, alignItems: 'center' },
+  topBidderTxt: { color: '#16A34A', fontWeight: '700', fontSize: 14 },
   historyLabel: { fontSize: 13, fontWeight: '600', marginTop: 24, marginBottom: 8 },
-  bidHistoryRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1 },
-  bidHistoryTime: { fontSize: 13 },
-  bidHistoryAmt: { fontSize: 13, fontWeight: '600' },
+  bidHistoryRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1 },
+  avatar: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  avatarTxt: { fontSize: 13, fontWeight: '700' },
+  bidHistoryTime: { fontSize: 11, marginTop: 2 },
+  bidHistoryAmt: { fontSize: 15 },
   liveBanner: { backgroundColor: '#DC2626', marginHorizontal: 16, marginTop: 12, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
   liveDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#fff' },
   liveTxt: { color: '#fff', fontWeight: '800', fontSize: 13 },
   liveSubTxt: { color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 2 },
   footer: { position: 'absolute', bottom: 0, left: 0, right: 0, borderTopWidth: 1, paddingHorizontal: 20, paddingVertical: 14 },
+  bidControls: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+  adjustBtn: { width: 44, height: 44, borderWidth: 1.5, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  adjustBtnTxt: { fontSize: 22, fontWeight: '700' },
   bidBtn: { backgroundColor: Colors.primary, borderRadius: 16, paddingVertical: 16, alignItems: 'center' },
   bidBtnTxt: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  topBidderFooter: { alignItems: 'center', paddingVertical: 8 },
+  topBidderFooterTxt: { color: '#16A34A', fontWeight: '800', fontSize: 15 },
 });
