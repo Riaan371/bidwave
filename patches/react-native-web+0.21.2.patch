@@ -1,0 +1,13 @@
+diff --git a/node_modules/react-native-web/dist/cjs/modules/setValueForStyles/index.js b/node_modules/react-native-web/dist/cjs/modules/setValueForStyles/index.js
+index 5c5cbee..1f2aade 100644
+--- a/node_modules/react-native-web/dist/cjs/modules/setValueForStyles/index.js
++++ b/node_modules/react-native-web/dist/cjs/modules/setValueForStyles/index.js
+@@ -37,7 +37,7 @@ function setValueForStyles(node, styles) {
+     if (isCustomProperty) {
+       style.setProperty(styleName, styleValue);
+     } else {
+-      style[styleName] = styleValue;
++      if (isNaN(Number(styleName))) { style[styleName] = styleValue; }
+     }
+   }
+ }
