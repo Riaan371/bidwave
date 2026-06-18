@@ -29,6 +29,17 @@ export default function LotDetail() {
     },
   });
 
+  const { data: liveSession } = useQuery({
+    queryKey: ['live-session', lot?.auction_id],
+    queryFn: async () => {
+      if (!lot?.auction_id) return null;
+      const { data } = await supabase.from('live_sessions').select('auction_id').eq('auction_id', lot.auction_id).eq('status', 'live').maybeSingle();
+      return data;
+    },
+    enabled: !!lot?.auction_id,
+    refetchInterval: 8000,
+  });
+
   const { data: bids } = useQuery({
     queryKey: ['lot', id, 'bids'],
     queryFn: async () => {
@@ -84,6 +95,18 @@ export default function LotDetail() {
       <Stack.Screen options={{ headerShown: true, headerTitle: '', headerBackTitle: 'Back' }} />
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
         <Image source={{ uri: lot.photos?.[0] }} style={s.heroImg} resizeMode="cover" />
+
+        {liveSession && (
+          <Pressable onPress={() => router.push(`/live/${liveSession.auction_id}`)} style={s.liveBanner}>
+            <View style={s.liveDot} />
+            <View style={{ flex: 1 }}>
+              <Text style={s.liveTxt}>LIVE NOW — Auctioneer is broadcasting</Text>
+              <Text style={s.liveSubTxt}>Tap to join live audio</Text>
+            </View>
+            <Text style={{ fontSize: 20 }}>🔊</Text>
+          </Pressable>
+        )}
+
         <View style={{ paddingHorizontal: 20, paddingTop: 16 }}>
           <Text style={[s.title, { color: ink }]}>{lot.title}</Text>
           {lot.description && <Text style={[s.desc, { color: muted }]}>{lot.description}</Text>}
@@ -145,6 +168,10 @@ const s = StyleSheet.create({
   bidHistoryRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1 },
   bidHistoryTime: { fontSize: 13 },
   bidHistoryAmt: { fontSize: 13, fontWeight: '600' },
+  liveBanner: { backgroundColor: '#DC2626', marginHorizontal: 16, marginTop: 12, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  liveDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#fff' },
+  liveTxt: { color: '#fff', fontWeight: '800', fontSize: 13 },
+  liveSubTxt: { color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 2 },
   footer: { position: 'absolute', bottom: 0, left: 0, right: 0, borderTopWidth: 1, paddingHorizontal: 20, paddingVertical: 14 },
   bidBtn: { backgroundColor: Colors.primary, borderRadius: 16, paddingVertical: 16, alignItems: 'center' },
   bidBtnTxt: { color: '#fff', fontWeight: '700', fontSize: 16 },
