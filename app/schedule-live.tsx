@@ -37,7 +37,6 @@ export default function ScheduleLive() {
 
       let scheduledAt: string | null = null;
       if (date && time) {
-        // Parse DD/MM/YYYY HH:MM
         const [d, m, y] = date.split('/');
         const [h, min] = time.split(':');
         const dt = new Date(Number(y), Number(m) - 1, Number(d), Number(h), Number(min));
@@ -45,23 +44,31 @@ export default function ScheduleLive() {
         scheduledAt = dt.toISOString();
       }
 
+      const isLive = !scheduledAt;
       const lotIds = pickedLots.map((l) => l.id);
       const { error } = await supabase.from('live_sessions').insert({
         auction_id: '00000000-0000-0000-0000-0000000000a1',
         auctioneer_id: session.user.id,
         channel_name: '00000000-0000-0000-0000-0000000000a1',
-        status: scheduledAt ? 'scheduled' : 'live',
+        status: isLive ? 'live' : 'scheduled',
         scheduled_at: scheduledAt,
         lot_ids: lotIds,
         current_lot_index: 0,
         title: title.trim(),
       });
       if (error) throw error;
+      return { isLive };
     },
-    onSuccess: () => {
+    onSuccess: ({ isLive }) => {
       queryClient.invalidateQueries({ queryKey: ['live-sessions'] });
       queryClient.invalidateQueries({ queryKey: ['scheduled-sessions'] });
-      router.replace('/(tabs)/');
+      queryClient.invalidateQueries({ queryKey: ['my-sessions'] });
+      if (isLive) {
+        // Drop auctioneer straight into the live room
+        router.replace('/live/00000000-0000-0000-0000-0000000000a1');
+      } else {
+        router.replace('/(tabs)/');
+      }
     },
     onError: (e: any) => Alert.alert('Error', e.message),
   });
