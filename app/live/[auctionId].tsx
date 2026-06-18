@@ -188,8 +188,8 @@ export default function LiveRoom() {
               <Text style={s.lotTitle}>{currentLot.title}</Text>
               <Text style={s.lotBid}>{formatZAR(currentLot.current_bid ?? currentLot.starting_bid)}</Text>
               {session && (
-                <Pressable onPress={() => router.push(`/lot/${currentLot.id}`)} style={s.bidBtn}>
-                  <Text style={s.bidBtnTxt}>Place a Bid</Text>
+                <Pressable onPress={() => router.push(`/lot/${currentLot.id}`)} style={[s.bidBtn, isHost && { backgroundColor: '#16A34A' }]}>
+                  <Text style={s.bidBtnTxt}>{isHost ? '📋 View Live Bids' : 'Place a Bid'}</Text>
                 </Pressable>
               )}
             </View>
@@ -259,12 +259,9 @@ export default function LiveRoom() {
         </View>
 
         {isHost && status === 'idle' && (
-          <View style={s.setupNote}>
-            <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: '600', marginBottom: 4 }}>One-time setup required</Text>
-            <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, lineHeight: 18 }}>
-              Deploy the token server via Supabase Edge Functions before going live.
-            </Text>
-          </View>
+          <Pressable onPress={leave} style={[s.outlineBtn, { borderColor: '#ef4444', marginTop: 12 }]}>
+            <Text style={[s.outlineBtnTxt, { color: '#ef4444' }]}>End Session</Text>
+          </Pressable>
         )}
       </View>
     </SafeAreaView>
