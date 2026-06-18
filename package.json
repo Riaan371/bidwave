@@ -31,6 +31,7 @@
   "devDependencies": {
     "@types/react": "~19.2.2",
     "patch-package": "^8.0.1",
+    "sharp": "^0.35.1",
     "typescript": "~6.0.3"
   },
   "scripts": {
@@ -38,6 +39,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
+    "build": "npx expo export --platform web && node scripts/inject-pwa.js",
     "postinstall": "node scripts/fix-rnw.js"
   },
   "private": true
