@@ -1,9 +1,8 @@
-import '../global.css';
 import { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../lib/auth-store';
 import { useThemeStore } from '../lib/theme-store';
@@ -35,7 +34,7 @@ export default function RootLayout() {
 
   if (!ready || !initialized) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
+      <View style={s.loading}>
         <ActivityIndicator size="large" color="#0B5FFF" />
       </View>
     );
@@ -48,3 +47,7 @@ export default function RootLayout() {
     </QueryClientProvider>
   );
 }
+
+const s = StyleSheet.create({
+  loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
+});
