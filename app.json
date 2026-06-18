@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "BidWave",
+    "name": "West Coast Pickers",
     "slug": "bidwave",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -12,7 +12,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#0B5FFF",
+        "backgroundColor": "#0D1B2A",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -24,11 +24,11 @@
       "favicon": "./assets/favicon.png",
       "bundler": "metro",
       "output": "single",
-      "name": "BidWave",
-      "shortName": "BidWave",
+      "name": "West Coast Pickers",
+      "shortName": "WC Pickers",
       "description": "South Africa's live & timed auction marketplace. Bid on vehicles, livestock, property, electronics and more.",
-      "themeColor": "#0B5FFF",
-      "backgroundColor": "#0B5FFF",
+      "themeColor": "#0D1B2A",
+      "backgroundColor": "#0D1B2A",
       "display": "standalone",
       "orientation": "any",
       "scope": "/",
