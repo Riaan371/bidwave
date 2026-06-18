@@ -21,6 +21,7 @@ export default function ManageLots() {
   const pickMode = pick === '1';
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showCreate, setShowCreate] = useState(false);
+  const [editingLot, setEditingLot] = useState<any | null>(null);
 
   // Create lot form state
   const [images, setImages] = useState<{ uri: string; base64: string | null }[]>([]);
@@ -31,6 +32,17 @@ export default function ManageLots() {
   const [reserve, setReserve] = useState('');
   const [buyNow, setBuyNow] = useState('');
   const [increment, setIncrement] = useState('500');
+
+  // Edit lot form state
+  const [editImages, setEditImages] = useState<{ uri: string; base64: string | null }[]>([]);
+  const [editExistingPhotos, setEditExistingPhotos] = useState<string[]>([]);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editCategory, setEditCategory] = useState(CATEGORIES[0]);
+  const [editStartingBid, setEditStartingBid] = useState('');
+  const [editReserve, setEditReserve] = useState('');
+  const [editBuyNow, setEditBuyNow] = useState('');
+  const [editIncrement, setEditIncrement] = useState('500');
 
   const { data: lots, isLoading } = useQuery({
     queryKey: ['auctioneer-lots', session?.user.id],
@@ -94,6 +106,66 @@ export default function ManageLots() {
         setSelected((prev) => { const s = new Set(prev); s.add(data.id); return s; });
       }
       Alert.alert('Lot created', 'Added to your inventory.');
+    },
+    onError: (e: any) => Alert.alert('Error', e.message),
+  });
+
+  const openEdit = (lot: any) => {
+    setEditingLot(lot);
+    setEditExistingPhotos(lot.photos ?? []);
+    setEditImages([]);
+    setEditTitle(lot.title ?? '');
+    setEditDescription(lot.description ?? '');
+    setEditCategory(lot.category ?? CATEGORIES[0]);
+    setEditStartingBid(String(lot.starting_bid ?? ''));
+    setEditReserve(lot.reserve ? String(lot.reserve) : '');
+    setEditBuyNow(lot.buy_now ? String(lot.buy_now) : '');
+    setEditIncrement(String(lot.increment ?? 500));
+  };
+
+  const pickEditImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.7, base64: true, allowsMultipleSelection: true, selectionLimit: 6,
+    });
+    if (!result.canceled) {
+      setEditImages((prev) => [...prev, ...result.assets.map((a) => ({ uri: a.uri, base64: a.base64 ?? null }))].slice(0, 6 - editExistingPhotos.length));
+    }
+  };
+
+  const updateLot = useMutation({
+    mutationFn: async () => {
+      if (!session || !editingLot) throw new Error('Not logged in');
+      if (!editTitle.trim()) throw new Error('Title required');
+
+      const newPhotoUrls: string[] = [];
+      for (let i = 0; i < editImages.length; i++) {
+        const img = editImages[i];
+        if (!img.base64) continue;
+        const path = `${session.user.id}/${Date.now()}-${i}.jpg`;
+        const { error } = await supabase.storage.from('lot-photos').upload(path, decode(img.base64), { contentType: 'image/jpeg' });
+        if (error) throw error;
+        const { data: pub } = supabase.storage.from('lot-photos').getPublicUrl(path);
+        newPhotoUrls.push(pub.publicUrl);
+      }
+
+      const allPhotos = [...editExistingPhotos, ...newPhotoUrls];
+      const { error } = await supabase.from('lots').update({
+        title: editTitle.trim(),
+        description: editDescription.trim() || null,
+        photos: allPhotos,
+        category: editCategory,
+        starting_bid: Number(editStartingBid),
+        reserve: editReserve ? Number(editReserve) : null,
+        buy_now: editBuyNow ? Number(editBuyNow) : null,
+        increment: Number(editIncrement) || 500,
+      }).eq('id', editingLot.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['auctioneer-lots'] });
+      queryClient.invalidateQueries({ queryKey: ['lots'] });
+      setEditingLot(null);
     },
     onError: (e: any) => Alert.alert('Error', e.message),
   });
@@ -204,10 +276,100 @@ export default function ManageLots() {
 
         {isLoading && <ActivityIndicator color={Colors.primary} style={{ marginTop: 20 }} />}
 
+        {editingLot && (
+          <View style={[s.createForm, { backgroundColor: card, borderColor: Colors.primary }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <Text style={{ color: ink, fontWeight: '700', fontSize: 15 }}>✏️ Edit Lot</Text>
+              <Pressable onPress={() => setEditingLot(null)}>
+                <Text style={{ color: muted, fontSize: 18 }}>✕</Text>
+              </Pressable>
+            </View>
+
+            <Text style={[s.label, { color: muted }]}>Photos</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                {editExistingPhotos.map((uri, i) => (
+                  <View key={`ex-${i}`}>
+                    <Image source={{ uri }} style={[s.thumb, { borderColor: border }]} />
+                    <Pressable
+                      onPress={() => setEditExistingPhotos((p) => p.filter((_, idx) => idx !== i))}
+                      style={s.removePhotoBtn}
+                    >
+                      <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>✕</Text>
+                    </Pressable>
+                  </View>
+                ))}
+                {editImages.map((img, i) => (
+                  <View key={`new-${i}`}>
+                    <Image source={{ uri: img.uri }} style={[s.thumb, { borderColor: Colors.primary }]} />
+                    <Pressable
+                      onPress={() => setEditImages((p) => p.filter((_, idx) => idx !== i))}
+                      style={s.removePhotoBtn}
+                    >
+                      <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>✕</Text>
+                    </Pressable>
+                  </View>
+                ))}
+                {(editExistingPhotos.length + editImages.length) < 6 && (
+                  <Pressable onPress={pickEditImage} style={[s.addThumb, { borderColor: border }]}>
+                    <Text style={{ fontSize: 28, color: muted }}>+</Text>
+                  </Pressable>
+                )}
+              </View>
+            </ScrollView>
+
+            <Text style={[s.label, { color: muted }]}>Title *</Text>
+            <TextInput value={editTitle} onChangeText={setEditTitle} placeholderTextColor="#9CA3AF" style={[inputStyle, s.mb]} />
+
+            <Text style={[s.label, { color: muted }]}>Description</Text>
+            <TextInput value={editDescription} onChangeText={setEditDescription} placeholderTextColor="#9CA3AF" multiline numberOfLines={3} textAlignVertical="top" style={[inputStyle, s.mb, { height: 80 }]} />
+
+            <Text style={[s.label, { color: muted }]}>Category</Text>
+            <View style={[s.chipRow, s.mb]}>
+              {CATEGORIES.map((cat) => {
+                const active = editCategory === cat;
+                return (
+                  <Pressable key={cat} onPress={() => setEditCategory(cat)}
+                    style={[s.chip, { borderColor: active ? Colors.primary : border, backgroundColor: active ? Colors.primary : 'transparent' }]}>
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: active ? '#fff' : ink }}>{cat}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={[s.label, { color: muted }]}>Starting Bid (R)</Text>
+                <TextInput value={editStartingBid} onChangeText={setEditStartingBid} keyboardType="numeric" placeholderTextColor="#9CA3AF" style={[inputStyle, s.mb]} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[s.label, { color: muted }]}>Increment (R)</Text>
+                <TextInput value={editIncrement} onChangeText={setEditIncrement} keyboardType="numeric" placeholderTextColor="#9CA3AF" style={[inputStyle, s.mb]} />
+              </View>
+            </View>
+
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={[s.label, { color: muted }]}>Reserve (R)</Text>
+                <TextInput value={editReserve} onChangeText={setEditReserve} placeholder="Optional" keyboardType="numeric" placeholderTextColor="#9CA3AF" style={[inputStyle, s.mb]} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[s.label, { color: muted }]}>Buy Now (R)</Text>
+                <TextInput value={editBuyNow} onChangeText={setEditBuyNow} placeholder="Optional" keyboardType="numeric" placeholderTextColor="#9CA3AF" style={[inputStyle, s.mb]} />
+              </View>
+            </View>
+
+            <Pressable onPress={() => updateLot.mutate()} disabled={updateLot.isPending}
+              style={[s.submitBtn, { opacity: updateLot.isPending ? 0.7 : 1 }]}>
+              {updateLot.isPending ? <ActivityIndicator color="#fff" /> : <Text style={s.submitBtnTxt}>💾 Save Changes</Text>}
+            </Pressable>
+          </View>
+        )}
+
         {(lots ?? []).map((lot) => {
           const isSelected = selected.has(lot.id);
           return (
-            <Pressable key={lot.id} onPress={() => pickMode ? toggleSelect(lot.id) : router.push(`/lot/${lot.id}`)}
+            <Pressable key={lot.id} onPress={() => pickMode ? toggleSelect(lot.id) : openEdit(lot)}
               style={[s.lotRow, { backgroundColor: card, borderColor: isSelected ? Colors.primary : border }]}>
               <Image source={{ uri: lot.photos?.[0] || 'https://picsum.photos/80/80' }} style={s.lotThumb} />
               <View style={{ flex: 1, marginLeft: 12 }}>
@@ -247,6 +409,7 @@ const s = StyleSheet.create({
   imageRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
   thumb: { width: 72, height: 72, borderRadius: 10, borderWidth: 1 },
   addThumb: { width: 72, height: 72, borderRadius: 10, borderWidth: 2, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
+  removePhotoBtn: { position: 'absolute', top: -6, right: -6, backgroundColor: '#ef4444', borderRadius: 10, width: 20, height: 20, alignItems: 'center', justifyContent: 'center' },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   chip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 99, borderWidth: 1 },
   submitBtn: { backgroundColor: Colors.primary, borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 4 },

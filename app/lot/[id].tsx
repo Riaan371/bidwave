@@ -1,7 +1,7 @@
-import { View, Text, Image, ScrollView, Pressable, ActivityIndicator, Alert, StyleSheet, TextInput } from 'react-native';
+import { View, Text, Image, ScrollView, Pressable, ActivityIndicator, Alert, StyleSheet, TextInput, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../lib/auth-store';
@@ -21,6 +21,8 @@ export default function LotDetail() {
   const { bg, card, border, ink, muted } = useAppTheme();
 
   const [customBid, setCustomBid] = useState<number | null>(null);
+  const [photoIndex, setPhotoIndex] = useState(0);
+  const screenWidth = Dimensions.get('window').width;
 
   const { data: lot, isLoading } = useQuery({
     queryKey: ['lot', id],
@@ -174,7 +176,36 @@ export default function LotDetail() {
     <SafeAreaView style={[s.root, { backgroundColor: bg }]}>
       <Stack.Screen options={{ headerShown: true, headerTitle: '', headerBackTitle: 'Back' }} />
       <ScrollView contentContainerStyle={{ paddingBottom: 160 }}>
-        <Image source={{ uri: lot.photos?.[0] }} style={s.heroImg} resizeMode="cover" />
+        {/* Image carousel */}
+        {lot.photos && lot.photos.length > 0 ? (
+          <View>
+            <ScrollView
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onScroll={(e) => {
+                const idx = Math.round(e.nativeEvent.contentOffset.x / screenWidth);
+                setPhotoIndex(idx);
+              }}
+              scrollEventThrottle={16}
+            >
+              {lot.photos.map((uri: string, i: number) => (
+                <Image key={i} source={{ uri }} style={[s.heroImg, { width: screenWidth }]} resizeMode="cover" />
+              ))}
+            </ScrollView>
+            {lot.photos.length > 1 && (
+              <View style={s.dotRow}>
+                {lot.photos.map((_: string, i: number) => (
+                  <View key={i} style={[s.dot, i === photoIndex && s.dotActive]} />
+                ))}
+              </View>
+            )}
+          </View>
+        ) : (
+          <View style={[s.heroImg, { backgroundColor: '#e5e7eb', alignItems: 'center', justifyContent: 'center' }]}>
+            <Text style={{ color: '#9ca3af', fontSize: 40 }}>📷</Text>
+          </View>
+        )}
 
         {liveSession && (
           <Pressable onPress={() => router.push(`/live/${liveSession.auction_id}`)} style={s.liveBanner}>
@@ -346,6 +377,9 @@ export default function LotDetail() {
 const s = StyleSheet.create({
   root: { flex: 1 },
   heroImg: { width: '100%', height: 280 },
+  dotRow: { flexDirection: 'row', justifyContent: 'center', gap: 6, paddingVertical: 8 },
+  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#d1d5db' },
+  dotActive: { backgroundColor: Colors.primary, width: 18 },
   title: { fontSize: 24, fontWeight: '800', marginBottom: 6 },
   desc: { fontSize: 15, lineHeight: 22 },
   bidRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 16, borderTopWidth: 1, paddingTop: 16 },
