@@ -87,12 +87,26 @@ export default function LotDetail() {
       const { error } = await supabase.from('lots').update({
         winner_id: topBid.bidder_id,
         current_bid: topBid.amount,
+        closed: true,
+        no_sale: false,
       }).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lot', id] });
       Alert.alert('🔨 SOLD!', `Lot sold to ${bids?.[0]?.users?.full_name ?? 'top bidder'} for ${formatZAR(bids?.[0]?.amount)}`);
+    },
+    onError: (e: any) => Alert.alert('Error', e.message),
+  });
+
+  const markNoSale = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from('lots').update({ closed: true, no_sale: true }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lot', id] });
+      Alert.alert('No Sale', 'Bidding closed. No sale recorded.');
     },
     onError: (e: any) => Alert.alert('Error', e.message),
   });
@@ -129,6 +143,8 @@ export default function LotDetail() {
   const isTopBidder = !!session && topBidderId === session.user.id;
   const isAuctioneer = useAuthStore.getState().profile?.role === 'auctioneer';
   const isSold = !!lot.winner_id;
+  const isNoSale = (lot as any).no_sale === true;
+  const isClosed = (lot as any).closed === true;
 
   return (
     <SafeAreaView style={[s.root, { backgroundColor: bg }]}>
@@ -202,42 +218,65 @@ export default function LotDetail() {
         </View>
       </ScrollView>
 
-      {/* Auctioneer SOLD button */}
+      {/* Auctioneer footer */}
       {isAuctioneer && (
         <View style={[s.footer, { backgroundColor: card, borderTopColor: border }]}>
-          {isSold ? (
-            <View style={[s.soldBadge]}>
-              <Text style={s.soldTxt}>🔨 SOLD — {formatZAR(lot.current_bid)}</Text>
-              <Text style={{ color: '#16A34A', fontSize: 12, textAlign: 'center', marginTop: 4 }}>
-                Winner: {bids?.[0]?.users?.full_name ?? 'Top bidder'}
+          {isClosed ? (
+            <View style={[s.soldBadge, isNoSale && { borderColor: '#D97706', backgroundColor: 'rgba(217,119,6,0.1)' }]}>
+              <Text style={[s.soldTxt, isNoSale && { color: '#D97706' }]}>
+                {isNoSale ? '🚫 No Sale — Bidding Closed' : `🔨 SOLD — ${formatZAR(lot.current_bid)}`}
               </Text>
+              {!isNoSale && (
+                <Text style={{ color: '#16A34A', fontSize: 12, textAlign: 'center', marginTop: 4 }}>
+                  Winner: {bids?.[0]?.users?.full_name ?? 'Top bidder'}
+                </Text>
+              )}
             </View>
           ) : (
-            <Pressable
-              onPress={() => {
-                if (!bids?.length) { Alert.alert('No bids', 'There are no bids on this lot yet.'); return; }
-                Alert.alert(
-                  '🔨 Mark as Sold?',
-                  `Sell to ${bids[0].users?.full_name ?? 'top bidder'} for ${formatZAR(bids[0].amount)}?`,
-                  [
-                    { text: 'Cancel', style: 'cancel' },
-                    { text: 'SOLD', style: 'destructive', onPress: () => markSold.mutate() },
-                  ]
-                );
-              }}
-              disabled={markSold.isPending}
-              style={[s.soldBtn, { opacity: markSold.isPending ? 0.7 : 1 }]}
-            >
-              {markSold.isPending
-                ? <ActivityIndicator color="#fff" />
-                : <Text style={s.soldBtnTxt}>🔨 Mark as SOLD</Text>}
-            </Pressable>
+            <View style={{ gap: 10 }}>
+              <Pressable
+                onPress={() => {
+                  if (!bids?.length) { Alert.alert('No bids', 'There are no bids on this lot yet.'); return; }
+                  Alert.alert(
+                    '🔨 Mark as Sold?',
+                    `Sell to ${bids[0].users?.full_name ?? 'top bidder'} for ${formatZAR(bids[0].amount)}?`,
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      { text: 'SOLD', onPress: () => markSold.mutate() },
+                    ]
+                  );
+                }}
+                disabled={markSold.isPending || markNoSale.isPending}
+                style={[s.soldBtn, { opacity: markSold.isPending ? 0.7 : 1 }]}
+              >
+                {markSold.isPending ? <ActivityIndicator color="#fff" /> : <Text style={s.soldBtnTxt}>🔨 SOLD — Close Bidding</Text>}
+              </Pressable>
+              <Pressable
+                onPress={() => Alert.alert('No Sale?', 'Close bidding with no winner?', [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'No Sale', onPress: () => markNoSale.mutate() },
+                ])}
+                disabled={markSold.isPending || markNoSale.isPending}
+                style={[s.noSaleBtn, { opacity: markNoSale.isPending ? 0.7 : 1 }]}
+              >
+                {markNoSale.isPending ? <ActivityIndicator color="#D97706" /> : <Text style={s.noSaleBtnTxt}>🚫 No Sale — Close Bidding</Text>}
+              </Pressable>
+            </View>
           )}
         </View>
       )}
 
       {/* Bidding footer */}
-      {!isAuctioneer && (
+      {!isAuctioneer && isClosed && (
+        <View style={[s.footer, { backgroundColor: card, borderTopColor: border }]}>
+          <View style={[s.soldBadge, isNoSale && { borderColor: '#D97706', backgroundColor: 'rgba(217,119,6,0.1)' }]}>
+            <Text style={[s.soldTxt, isNoSale && { color: '#D97706' }]}>
+              {isNoSale ? '🚫 Bidding Closed — No Sale' : `🔨 SOLD — ${formatZAR(lot.current_bid)}`}
+            </Text>
+          </View>
+        </View>
+      )}
+      {!isAuctioneer && !isClosed && (
         <View style={[s.footer, { backgroundColor: card, borderTopColor: border }]}>
           {isTopBidder ? (
             <View style={s.topBidderFooter}>
@@ -311,7 +350,9 @@ const s = StyleSheet.create({
   topBidderFooter: { alignItems: 'center', paddingVertical: 8 },
   topBidderFooterTxt: { color: '#16A34A', fontWeight: '800', fontSize: 15 },
   soldBtn: { backgroundColor: '#16A34A', borderRadius: 16, paddingVertical: 16, alignItems: 'center' },
-  soldBtnTxt: { color: '#fff', fontWeight: '800', fontSize: 17, letterSpacing: 0.5 },
+  soldBtnTxt: { color: '#fff', fontWeight: '800', fontSize: 16 },
+  noSaleBtn: { borderWidth: 1.5, borderColor: '#D97706', borderRadius: 16, paddingVertical: 14, alignItems: 'center' },
+  noSaleBtnTxt: { color: '#D97706', fontWeight: '700', fontSize: 15 },
   soldBadge: { backgroundColor: 'rgba(22,163,74,0.1)', borderWidth: 1.5, borderColor: '#16A34A', borderRadius: 14, padding: 14, alignItems: 'center' },
-  soldTxt: { color: '#16A34A', fontWeight: '800', fontSize: 18 },
+  soldTxt: { color: '#16A34A', fontWeight: '800', fontSize: 17 },
 });
