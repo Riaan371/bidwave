@@ -1,11 +1,19 @@
-import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import { View, Text, Image, Pressable, StyleSheet, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../lib/auth-store';
 import { useAppTheme, Colors } from '../lib/theme';
 import CountdownTimer from './CountdownTimer';
+
+// Reanimated only on native — crashes on web in production builds
+let Animated: any = View;
+let FadeInDown: any = null;
+if (Platform.OS !== 'web') {
+  const R = require('react-native-reanimated');
+  Animated = R.default;
+  FadeInDown = R.FadeInDown;
+}
 
 export function formatZAR(amount: number | null | undefined) {
   if (amount == null) return '—';
@@ -35,8 +43,10 @@ export default function LotCard({ lot, index = 0, isWatched }: { lot: LotCardDat
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['watchlist'] }),
   });
 
+  const entering = FadeInDown ? FadeInDown.delay(index * 60).duration(350) : undefined;
+
   return (
-    <Animated.View entering={FadeInDown.delay(index * 60).duration(350)}>
+    <View entering={entering}>
       <Pressable onPress={() => router.push(`/lot/${lot.id}`)} style={[s.card, { backgroundColor: card, borderColor: border }]}>
         <View>
           <Image source={{ uri: lot.photos?.[0] }} style={s.img} resizeMode="cover" />
@@ -58,7 +68,7 @@ export default function LotCard({ lot, index = 0, isWatched }: { lot: LotCardDat
           {lot.end_at && <CountdownTimer endAt={lot.end_at} />}
         </View>
       </Pressable>
-    </Animated.View>
+    </View>
   );
 }
 

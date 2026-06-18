@@ -1,9 +1,8 @@
-import { View, Text, Image, ScrollView, Pressable, ActivityIndicator, Alert, StyleSheet } from 'react-native';
+import { View, Text, Image, ScrollView, Pressable, ActivityIndicator, Alert, StyleSheet, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, router } from 'expo-router';
 import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import Animated, { useSharedValue, useAnimatedStyle, withSequence, withTiming } from 'react-native-reanimated';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../lib/auth-store';
 import { useAppTheme, Colors } from '../../lib/theme';
@@ -20,7 +19,6 @@ export default function LotDetail() {
   const session = useAuthStore((s) => s.session);
   const queryClient = useQueryClient();
   const { bg, card, border, ink, muted } = useAppTheme();
-  const bidScale = useSharedValue(1);
 
   const { data: lot, isLoading } = useQuery({
     queryKey: ['lot', id],
@@ -50,7 +48,6 @@ export default function LotDetail() {
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bids', filter: `lot_id=eq.${id}` }, () => {
         queryClient.invalidateQueries({ queryKey: ['lot', id, 'bids'] });
-        bidScale.value = withSequence(withTiming(1.08, { duration: 120 }), withTiming(1, { duration: 180 }));
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
@@ -66,14 +63,11 @@ export default function LotDetail() {
       return nextBid;
     },
     onSuccess: () => {
-      bidScale.value = withSequence(withTiming(1.08, { duration: 120 }), withTiming(1, { duration: 180 }));
       queryClient.invalidateQueries({ queryKey: ['lot', id] });
       queryClient.invalidateQueries({ queryKey: ['lot', id, 'bids'] });
     },
     onError: (error: any) => { Alert.alert('Could not place bid', error.message); },
   });
-
-  const bidPriceStyle = useAnimatedStyle(() => ({ transform: [{ scale: bidScale.value }] }));
 
   if (isLoading || !lot) {
     return (
@@ -98,7 +92,7 @@ export default function LotDetail() {
           <View style={[s.bidRow, { borderTopColor: border }]}>
             <View>
               <Text style={[s.bidLabel, { color: muted }]}>Current bid</Text>
-              <Animated.Text style={[s.bidAmt, bidPriceStyle]}>{formatZAR(lot.current_bid ?? lot.starting_bid)}</Animated.Text>
+              <Text style={s.bidAmt}>{formatZAR(lot.current_bid ?? lot.starting_bid)}</Text>
             </View>
             {lot.buy_now && (
               <View style={{ alignItems: 'flex-end' }}>
