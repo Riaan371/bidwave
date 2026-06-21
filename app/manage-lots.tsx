@@ -1,4 +1,4 @@
-import { View, Text, FlatList, Image, Pressable, TextInput, ScrollView, ActivityIndicator, Alert, StyleSheet } from 'react-native';
+import { View, Text, FlatList, Image, Pressable, TouchableOpacity, TextInput, ScrollView, ActivityIndicator, Alert, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
@@ -398,12 +398,12 @@ export default function ManageLots() {
                 </View>
               ) : (
                 <View style={{ flexDirection: 'row', gap: 8, marginLeft: 8 }}>
-                  <Pressable onPress={() => openEdit(lot)} style={s.iconBtn}>
+                  <TouchableOpacity onPress={() => openEdit(lot)} style={s.iconBtn} activeOpacity={0.6}>
                     <Text style={{ fontSize: 18 }}>✏️</Text>
-                  </Pressable>
-                  <Pressable onPress={() => deleteLot.mutate(lot.id)} style={[s.iconBtn, s.iconBtnRed]}>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => deleteLot.mutate(lot.id)} style={[s.iconBtn, s.iconBtnRed]} activeOpacity={0.6}>
                     <Text style={{ fontSize: 18 }}>🗑️</Text>
-                  </Pressable>
+                  </TouchableOpacity>
                 </View>
               )}
             </RowEl>
