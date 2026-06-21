@@ -174,14 +174,15 @@ export default function ManageLots() {
 
   const deleteLot = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('lots').update({ closed: true, no_sale: true }).eq('id', id);
-      if (error) throw error;
+      const { error } = await supabase.from('lots').delete().eq('id', id);
+      if (error) throw new Error(error.message + ' (code: ' + error.code + ')');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['auctioneer-lots'] });
       queryClient.invalidateQueries({ queryKey: ['lots'] });
+      Alert.alert('Deleted', 'Lot removed.');
     },
-    onError: (e: any) => Alert.alert('Error', e.message),
+    onError: (e: any) => Alert.alert('Delete failed', e.message),
   });
 
   const toggleSelect = (id: string) => {
