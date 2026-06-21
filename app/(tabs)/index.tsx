@@ -118,8 +118,11 @@ export default function Home() {
               <Text style={s.heroSub}>
                 {profile ? `Welcome back, ${profile.full_name.split(' ')[0]}` : 'Welcome to'}
               </Text>
-              <Text style={s.heroTitle}>BidWave</Text>
-              <Text style={s.heroCaption}>South Africa's trusted live & timed auction marketplace 🇿🇦</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 }}>
+                <Image source={require('../../assets/icon.png')} style={{ width: 48, height: 48, borderRadius: 12 }} resizeMode="cover" />
+                <Text style={s.heroTitle}>West Coast Pickers</Text>
+              </View>
+              <Text style={s.heroCaption}>South Africa's premier live auction marketplace 🇿🇦</Text>
             </View>
 
             {/* Live Now banner */}
@@ -150,7 +153,7 @@ export default function Home() {
                         <View style={s.upcomingDot} />
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={s.upcomingTitle}>🔴 LIVE AUCTION SCHEDULED</Text>
+                        <Text style={s.upcomingTitle}>📅 UPCOMING LIVE AUCTION</Text>
                         <Text style={s.upcomingName}>{ls.title ?? 'Live Auction'}</Text>
                         {dateStr ? <Text style={s.upcomingDate}>📅 {dateStr}</Text> : null}
                         {ls.lot_ids && ls.lot_ids.length > 0 && (
@@ -248,11 +251,11 @@ const s = StyleSheet.create({
   heroSub: { color: 'rgba(255,255,255,0.75)', fontSize: 13, marginBottom: 2 },
   heroTitle: { color: '#fff', fontSize: 32, fontWeight: '800', marginBottom: 4 },
   heroCaption: { color: 'rgba(255,255,255,0.75)', fontSize: 13 },
-  upcomingBanner: { backgroundColor: '#FEF2F2', borderWidth: 1.5, borderColor: '#DC2626', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  upcomingDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#DC2626' },
-  upcomingTitle: { color: '#DC2626', fontWeight: '800', fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 2 },
+  upcomingBanner: { backgroundColor: '#EFF6FF', borderWidth: 1.5, borderColor: Colors.primary, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  upcomingDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.primary },
+  upcomingTitle: { color: Colors.primary, fontWeight: '800', fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 2 },
   upcomingName: { color: '#0F172A', fontWeight: '700', fontSize: 15, marginTop: 2 },
-  upcomingDate: { color: '#DC2626', fontSize: 12, fontWeight: '600', marginTop: 4 },
+  upcomingDate: { color: Colors.primary, fontSize: 12, fontWeight: '600', marginTop: 4 },
   liveBanner: { backgroundColor: '#DC2626', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center' },
   liveDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#fff', marginRight: 12 },
   liveTxt: { color: '#fff', fontWeight: '800', fontSize: 13 },
