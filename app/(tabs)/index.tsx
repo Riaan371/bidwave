@@ -122,6 +122,9 @@ export default function Home() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 }}>
                 <Image source={require('../../assets/icon.png')} style={{ width: 48, height: 48, borderRadius: 12 }} resizeMode="cover" />
                 <Text style={s.heroTitle}>West Coast Pickers</Text>
+                <Pressable onPress={refetch} style={{ marginLeft: 'auto', padding: 8, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.15)' }}>
+                  <Text style={{ fontSize: 18 }}>{isRefetching ? '⏳' : '🔄'}</Text>
+                </Pressable>
               </View>
               <Text style={s.heroCaption}>South Africa's premier live auction marketplace 🇿🇦</Text>
             </View>

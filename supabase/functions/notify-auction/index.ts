@@ -6,10 +6,12 @@ const ONESIGNAL_API_KEY = Deno.env.get('ONESIGNAL_API_KEY') ?? '';
 serve(async (req) => {
   try {
     const body = await req.json();
+    console.log('Webhook body:', JSON.stringify(body));
     const record = body.record ?? body.new ?? body;
 
     const status = record.status;
     const title = record.title ?? 'Live Auction';
+    console.log('Status:', status, 'Title:', title);
 
     let heading = '';
     let message = '';
@@ -44,6 +46,7 @@ serve(async (req) => {
     });
 
     const data = await res.json();
+    console.log('OneSignal response:', JSON.stringify(data));
     return new Response(JSON.stringify(data), { status: 200, headers: { 'Content-Type': 'application/json' } });
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message }), { status: 500 });
