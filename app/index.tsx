@@ -1,5 +1,5 @@
 import { Redirect, Link } from 'expo-router';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Image } from 'react-native';
 import { useAuthStore } from '../lib/auth-store';
 
 export default function Welcome() {
@@ -11,9 +11,9 @@ export default function Welcome() {
   return (
     <View style={s.root}>
       <View style={s.top}>
-        <Text style={s.logo}>🌊</Text>
-        <Text style={s.title}>BidWave</Text>
-        <Text style={s.sub}>South Africa's trusted live & timed{'\n'}auction marketplace 🇿🇦</Text>
+        <Image source={require('../assets/icon.png')} style={s.logo} resizeMode="cover" />
+        <Text style={s.title}>West Coast Pickers</Text>
+        <Text style={s.sub}>South Africa's premier live{'\n'}auction marketplace 🇿🇦</Text>
       </View>
       <View style={s.btns}>
         <Link href="/(auth)/role" asChild>
@@ -41,8 +41,8 @@ export default function Welcome() {
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#0B5FFF', paddingHorizontal: 32 },
   top: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  logo: { fontSize: 64, marginBottom: 12 },
-  title: { fontSize: 48, fontWeight: '800', color: '#fff', letterSpacing: -1 },
+  logo: { width: 100, height: 100, borderRadius: 22, marginBottom: 20 },
+  title: { fontSize: 36, fontWeight: '800', color: '#fff', letterSpacing: -0.5, textAlign: 'center' },
   sub: { fontSize: 16, color: 'rgba(255,255,255,0.8)', textAlign: 'center', marginTop: 8, lineHeight: 24 },
   btns: { paddingBottom: 52, gap: 12 },
   btn: { borderRadius: 16, paddingVertical: 16, alignItems: 'center' },
