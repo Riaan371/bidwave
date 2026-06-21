@@ -135,9 +135,24 @@ export default function LiveRoom() {
   async function leave() {
     micTrackRef.current?.close();
     await clientRef.current?.leave();
-    if (isHost) await markSessionEnded(auctionId);
-    setStatus('ended');
-    router.back();
+    if (isHost) {
+      // Close all unsold lots in this session so they disappear from home screen
+      if (liveSession?.lot_ids?.length) {
+        await supabase
+          .from('lots')
+          .update({ closed: true, no_sale: true })
+          .in('id', liveSession.lot_ids)
+          .is('winner_id', null); // only lots not already sold
+      }
+      await markSessionEnded(auctionId);
+      queryClient.invalidateQueries({ queryKey: ['lots'] });
+      queryClient.invalidateQueries({ queryKey: ['live-sessions'] });
+      setStatus('ended');
+      router.replace('/(tabs)/');
+    } else {
+      setStatus('ended');
+      router.back();
+    }
   }
 
   async function toggleMic() {

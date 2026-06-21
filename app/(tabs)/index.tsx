@@ -28,6 +28,7 @@ type LotWithAuction = {
 async function fetchLots(): Promise<LotWithAuction[]> {
   const { data, error } = await supabase
     .from('lots').select('id, title, photos, starting_bid, current_bid, category, created_at, auctions(end_at)')
+    .eq('closed', false)
     .order('created_at', { ascending: false }).limit(30);
   if (error) throw error;
   return data as unknown as LotWithAuction[];

@@ -289,7 +289,25 @@ export default function LotDetail() {
                 )}
               </View>
               <Pressable
-                onPress={() => router.push(`/live/${lot.auction_id}`)}
+                onPress={async () => {
+                  // Advance to next lot in the live session
+                  const { data: ls } = await supabase
+                    .from('live_sessions')
+                    .select('lot_ids, current_lot_index')
+                    .eq('auction_id', lot.auction_id)
+                    .eq('status', 'live')
+                    .maybeSingle();
+                  if (ls && ls.lot_ids) {
+                    const next = (ls.current_lot_index ?? 0) + 1;
+                    if (next < ls.lot_ids.length) {
+                      await supabase.from('live_sessions')
+                        .update({ current_lot_index: next })
+                        .eq('auction_id', lot.auction_id)
+                        .eq('status', 'live');
+                    }
+                  }
+                  router.push(`/live/${lot.auction_id}`);
+                }}
                 style={{ backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 14, alignItems: 'center' }}
               >
                 <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>▶ Next Lot — Back to Live Room</Text>
