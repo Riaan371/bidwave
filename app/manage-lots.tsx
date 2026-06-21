@@ -1,7 +1,7 @@
 import { View, Text, FlatList, Image, Pressable, TouchableOpacity, TextInput, ScrollView, ActivityIndicator, Alert, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { decode } from 'base64-arraybuffer';
@@ -16,6 +16,7 @@ export default function ManageLots() {
   const session = useAuthStore((s) => s.session);
   const { bg, card, border, ink, muted, input } = useAppTheme();
   const queryClient = useQueryClient();
+  const scrollRef = useRef<ScrollView>(null);
   // If opened from schedule-live, we're in "pick" mode
   const { pick } = useLocalSearchParams<{ pick?: string }>();
   const pickMode = pick === '1';
@@ -111,6 +112,7 @@ export default function ManageLots() {
   });
 
   const openEdit = (lot: any) => {
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
     setEditingLot(lot);
     setEditExistingPhotos(lot.photos ?? []);
     setEditImages([]);
@@ -172,7 +174,7 @@ export default function ManageLots() {
 
   const deleteLot = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('lots').delete().eq('id', id);
+      const { error } = await supabase.from('lots').update({ closed: true, no_sale: true }).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -210,7 +212,7 @@ export default function ManageLots() {
         </Pressable>
       )}
 
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 60 }}>
+      <ScrollView ref={scrollRef} contentContainerStyle={{ padding: 16, paddingBottom: 60 }}>
         {/* Create new lot toggle */}
         <Pressable onPress={() => setShowCreate(!showCreate)}
           style={[s.createToggle, { backgroundColor: showCreate ? Colors.primary : card, borderColor: showCreate ? Colors.primary : border }]}>
