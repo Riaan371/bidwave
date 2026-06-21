@@ -170,6 +170,18 @@ export default function ManageLots() {
     onError: (e: any) => Alert.alert('Error', e.message),
   });
 
+  const deleteLot = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('lots').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['auctioneer-lots'] });
+      queryClient.invalidateQueries({ queryKey: ['lots'] });
+    },
+    onError: (e: any) => Alert.alert('Error', e.message),
+  });
+
   const toggleSelect = (id: string) => {
     setSelected((prev) => {
       const s = new Set(prev);
@@ -369,7 +381,7 @@ export default function ManageLots() {
         {(lots ?? []).map((lot) => {
           const isSelected = selected.has(lot.id);
           return (
-            <Pressable key={lot.id} onPress={() => pickMode ? toggleSelect(lot.id) : openEdit(lot)}
+            <Pressable key={lot.id} onPress={() => pickMode ? toggleSelect(lot.id) : undefined}
               style={[s.lotRow, { backgroundColor: card, borderColor: isSelected ? Colors.primary : border }]}>
               <Image source={{ uri: lot.photos?.[0] || 'https://picsum.photos/80/80' }} style={s.lotThumb} />
               <View style={{ flex: 1, marginLeft: 12 }}>
@@ -379,9 +391,18 @@ export default function ManageLots() {
                   {formatZAR(lot.current_bid ?? lot.starting_bid)}
                 </Text>
               </View>
-              {pickMode && (
+              {pickMode ? (
                 <View style={[s.checkbox, { borderColor: isSelected ? Colors.primary : border, backgroundColor: isSelected ? Colors.primary : 'transparent' }]}>
                   {isSelected && <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>✓</Text>}
+                </View>
+              ) : (
+                <View style={{ flexDirection: 'row', gap: 8, marginLeft: 8 }}>
+                  <Pressable onPress={() => openEdit(lot)} style={s.iconBtn}>
+                    <Text style={{ fontSize: 18 }}>✏️</Text>
+                  </Pressable>
+                  <Pressable onPress={() => deleteLot.mutate(lot.id)} style={[s.iconBtn, s.iconBtnRed]}>
+                    <Text style={{ fontSize: 18 }}>🗑️</Text>
+                  </Pressable>
                 </View>
               )}
             </Pressable>
@@ -401,6 +422,8 @@ const s = StyleSheet.create({
   sectionTitle: { fontSize: 15, fontWeight: '700', marginBottom: 12 },
   lotRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderRadius: 14, padding: 10, marginBottom: 10 },
   lotThumb: { width: 60, height: 60, borderRadius: 10 },
+  iconBtn: { width: 38, height: 38, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F3F4F6' },
+  iconBtnRed: { backgroundColor: '#FEE2E2' },
   lotTitle: { fontSize: 14, fontWeight: '600' },
   checkbox: { width: 26, height: 26, borderRadius: 13, borderWidth: 2, alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
   label: { fontSize: 12, fontWeight: '600', marginBottom: 4 },
