@@ -23,6 +23,31 @@ export default function Root({ children }: PropsWithChildren) {
         <link rel="icon" type="image/png" sizes="512x512" href="/icon-512-v2.png" />
         <link rel="icon" type="image/png" sizes="192x192" href="/icon-192-v2.png" />
 
+        {/* OneSignal Web Push */}
+        <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer />
+        <script dangerouslySetInnerHTML={{ __html: `
+          window.OneSignalDeferred = window.OneSignalDeferred || [];
+          OneSignalDeferred.push(async function(OneSignal) {
+            await OneSignal.init({
+              appId: "e7382b34-2b96-4f8e-97db-7ef9505ae8c3",
+              notifyButton: { enable: false },
+              promptOptions: {
+                slidedown: {
+                  prompts: [{
+                    type: "push",
+                    autoPrompt: true,
+                    text: {
+                      actionMessage: "Get notified when West Coast Pickers goes live or schedules a new auction.",
+                      acceptButton: "Allow",
+                      cancelButton: "No thanks"
+                    },
+                    delay: { pageViews: 1, timeDelay: 5 }
+                  }]
+                }
+              }
+            });
+          });
+        `}} />
         <ScrollViewStyleReset />
       </head>
       <body>
