@@ -1,4 +1,4 @@
-import { View, Text, Pressable, Switch, ScrollView, StyleSheet, Alert, TextInput, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, Switch, ScrollView, StyleSheet, Alert, TextInput, Platform, ActivityIndicator, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -252,10 +252,17 @@ export default function Profile() {
         {/* Avatar + name card */}
         <View style={[s.card, { backgroundColor: card, borderColor: border, marginBottom: 12 }]}>
           <View style={s.avatarRow}>
-            <View style={s.avatar}>
-              <Text style={s.avatarLetter}>{profile.full_name?.[0]?.toUpperCase() ?? '?'}</Text>
-            </View>
+            {profile.role === 'auctioneer' ? (
+              <Image source={require('../../assets/icon.png')} style={[s.avatar, { borderRadius: 16 }]} resizeMode="cover" />
+            ) : (
+              <View style={s.avatar}>
+                <Text style={s.avatarLetter}>{profile.full_name?.[0]?.toUpperCase() ?? '?'}</Text>
+              </View>
+            )}
             <View style={{ flex: 1 }}>
+              {profile.role === 'auctioneer' && (
+                <Text style={[s.cardTitle, { color: ink, fontSize: 13, fontWeight: '600', marginBottom: 2 }]}>West Coast Pickers</Text>
+              )}
               <Text style={[s.cardTitle, { color: ink, fontSize: 18 }]}>{profile.full_name}</Text>
               <Text style={[s.cardSub, { color: muted }]}>{profile.email}</Text>
               {profile.phone ? <Text style={[s.cardSub, { color: muted }]}>{profile.phone}</Text> : null}

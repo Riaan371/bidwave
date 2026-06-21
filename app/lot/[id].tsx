@@ -38,12 +38,26 @@ export default function LotDetail() {
     queryKey: ['live-session', lot?.auction_id],
     queryFn: async () => {
       if (!lot?.auction_id) return null;
-      const { data } = await supabase.from('live_sessions').select('auction_id').eq('auction_id', lot.auction_id).eq('status', 'live').maybeSingle();
+      const { data } = await supabase
+        .from('live_sessions')
+        .select('auction_id, lot_ids, current_lot_index')
+        .eq('auction_id', lot.auction_id)
+        .eq('status', 'live')
+        .maybeSingle();
       return data;
     },
     enabled: !!lot?.auction_id,
-    refetchInterval: 8000,
+    refetchInterval: 4000,
   });
+
+  // Auto-redirect all users when auctioneer advances to next lot
+  useEffect(() => {
+    if (!liveSession?.lot_ids || !id) return;
+    const activeLotId = liveSession.lot_ids[liveSession.current_lot_index ?? 0];
+    if (activeLotId && activeLotId !== id) {
+      router.replace(`/lot/${activeLotId}`);
+    }
+  }, [liveSession?.current_lot_index, id]);
 
   const { data: bids } = useQuery({
     queryKey: ['lot', id, 'bids'],
@@ -290,23 +304,22 @@ export default function LotDetail() {
               </View>
               <Pressable
                 onPress={async () => {
-                  // Advance to next lot in the live session
-                  const { data: ls } = await supabase
-                    .from('live_sessions')
-                    .select('lot_ids, current_lot_index')
-                    .eq('auction_id', lot.auction_id)
-                    .eq('status', 'live')
-                    .maybeSingle();
-                  if (ls && ls.lot_ids) {
+                  const ls = liveSession;
+                  if (ls?.lot_ids) {
                     const next = (ls.current_lot_index ?? 0) + 1;
                     if (next < ls.lot_ids.length) {
+                      // Advance index — all users auto-redirect via the useEffect above
                       await supabase.from('live_sessions')
                         .update({ current_lot_index: next })
                         .eq('auction_id', lot.auction_id)
                         .eq('status', 'live');
+                      router.replace(`/lot/${ls.lot_ids[next]}`);
+                    } else {
+                      router.push(`/live/${lot.auction_id}`);
                     }
+                  } else {
+                    router.push(`/live/${lot.auction_id}`);
                   }
-                  router.push(`/live/${lot.auction_id}`);
                 }}
                 style={{ backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 14, alignItems: 'center' }}
               >
