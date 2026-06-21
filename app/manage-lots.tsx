@@ -380,8 +380,9 @@ export default function ManageLots() {
 
         {(lots ?? []).map((lot) => {
           const isSelected = selected.has(lot.id);
+          const RowEl = pickMode ? Pressable : View;
           return (
-            <Pressable key={lot.id} onPress={() => pickMode ? toggleSelect(lot.id) : undefined}
+            <RowEl key={lot.id} {...(pickMode ? { onPress: () => toggleSelect(lot.id) } : {})}
               style={[s.lotRow, { backgroundColor: card, borderColor: isSelected ? Colors.primary : border }]}>
               <Image source={{ uri: lot.photos?.[0] || 'https://picsum.photos/80/80' }} style={s.lotThumb} />
               <View style={{ flex: 1, marginLeft: 12 }}>
@@ -405,7 +406,7 @@ export default function ManageLots() {
                   </Pressable>
                 </View>
               )}
-            </Pressable>
+            </RowEl>
           );
         })}
       </ScrollView>
