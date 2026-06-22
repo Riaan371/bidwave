@@ -10,6 +10,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const setSession = useAuthStore((s) => s.setSession);
   const loadProfile = useAuthStore((s) => s.loadProfile);
 
@@ -72,8 +73,13 @@ export default function Login() {
           placeholderTextColor="#9ca3af" keyboardType="email-address" autoCapitalize="none" />
 
         <Text style={s.label}>Password</Text>
-        <TextInput style={s.input} value={password} onChangeText={setPassword} placeholder="••••••••"
-          placeholderTextColor="#9ca3af" secureTextEntry autoCapitalize="none" />
+        <View style={s.passwordRow}>
+          <TextInput style={[s.input, { flex: 1, marginBottom: 0 }]} value={password} onChangeText={setPassword}
+            placeholder="••••••••" placeholderTextColor="#9ca3af" secureTextEntry={!showPassword} autoCapitalize="none" />
+          <Pressable onPress={() => setShowPassword(!showPassword)} style={s.eyeBtn}>
+            <Text style={s.eyeTxt}>{showPassword ? '🙈' : '👁'}</Text>
+          </Pressable>
+        </View>
 
         <Pressable disabled={loading} onPress={submit} style={[s.btn, { opacity: loading ? 0.8 : 1 }]}>
           {loading ? <ActivityIndicator color={Colors.navy} /> : <Text style={s.btnTxt}>Sign In</Text>}
@@ -100,6 +106,9 @@ const s = StyleSheet.create({
   sub: { fontSize: 14, color: 'rgba(15,23,42,0.5)', marginBottom: 24 },
   label: { fontSize: 12, fontWeight: '700', color: 'rgba(15,23,42,0.6)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
   input: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 13, fontSize: 15, color: '#0F172A', marginBottom: 14, backgroundColor: '#F8F7F4' },
+  passwordRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 10, backgroundColor: '#F8F7F4', marginBottom: 14 },
+  eyeBtn: { paddingHorizontal: 14, paddingVertical: 13 },
+  eyeTxt: { fontSize: 16 },
   btn: { backgroundColor: Colors.gold, borderRadius: 12, paddingVertical: 15, alignItems: 'center', marginTop: 6 },
   btnTxt: { color: Colors.navy, fontWeight: '800', fontSize: 16 },
   errorBox: { backgroundColor: '#fef2f2', borderWidth: 1, borderColor: '#fecaca', borderRadius: 10, padding: 12, marginBottom: 14 },
