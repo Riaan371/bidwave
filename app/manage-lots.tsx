@@ -174,8 +174,9 @@ export default function ManageLots() {
 
   const deleteLot = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('lots').delete().eq('id', id);
+      const { data, error } = await supabase.from('lots').delete().eq('id', id).select('id');
       if (error) throw new Error(error.message + ' (code: ' + error.code + ')');
+      if (!data || data.length === 0) throw new Error('Permission denied — RLS policy blocked the delete. Make sure you are logged in as an auctioneer.');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['auctioneer-lots'] });
