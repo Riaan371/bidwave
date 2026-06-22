@@ -1,4 +1,4 @@
-import { View, Text, Pressable, ScrollView, Image, TextInput, Alert, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, Pressable, ScrollView, Image, TextInput, ActivityIndicator, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, router, useFocusEffect } from 'expo-router';
 import { useState, useCallback } from 'react';
@@ -20,6 +20,7 @@ export default function ScheduleLive() {
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
   const [pickedLots, setPickedLots] = useState<{ id: string; title: string; photos: string[]; current_bid: number | null; starting_bid: number }[]>([]);
+  const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
 
   useFocusEffect(useCallback(() => {
     const picked = (global as any).__pickedLots;
@@ -91,15 +92,12 @@ export default function ScheduleLive() {
       queryClient.invalidateQueries({ queryKey: ['timed-auctions'] });
       queryClient.invalidateQueries({ queryKey: ['my-sessions'] });
       queryClient.invalidateQueries({ queryKey: ['auctioneer-lots'] });
-      const msg = auctionType === 'timed'
-        ? 'Your timed auction is now live on the home screen. Bidders can place bids until the deadline.'
-        : 'Your live auction is scheduled and visible on the home screen.';
-      Alert.alert('Auction Published! 🎉', msg, [
-        { text: 'View Home', onPress: () => router.replace('/(tabs)') },
-        { text: 'Back to Profile', onPress: () => router.replace('/(tabs)/profile') },
-      ]);
+      setMsg({ text: '✅ Auction published! Redirecting to home...', ok: true });
+      setTimeout(() => router.replace('/(tabs)'), 2000);
     },
-    onError: (e: any) => Alert.alert('Error', e.message),
+    onError: (e: any) => {
+      setMsg({ text: '❌ ' + e.message, ok: false });
+    },
   });
 
   const inputStyle = [s.input, { backgroundColor: input, borderColor: border, color: ink }];
@@ -212,6 +210,12 @@ export default function ScheduleLive() {
         </View>
       </ScrollView>
 
+      {msg && (
+        <View style={[s.msgBanner, { backgroundColor: msg.ok ? '#16A34A' : '#DC2626' }]}>
+          <Text style={s.msgTxt}>{msg.text}</Text>
+        </View>
+      )}
+
       <View style={[s.footer, { backgroundColor: bg, borderTopColor: border }]}>
         <Pressable
           onPress={() => schedule.mutate()}
@@ -250,6 +254,8 @@ const s = StyleSheet.create({
   lotThumb: { width: 50, height: 50, borderRadius: 8 },
   lotTitle: { fontSize: 13, fontWeight: '600' },
   removeBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  msgBanner: { position: 'absolute', bottom: 80, left: 16, right: 16, borderRadius: 12, padding: 14 },
+  msgTxt: { color: '#fff', fontWeight: '700', fontSize: 14, textAlign: 'center' },
   footer: { position: 'absolute', bottom: 0, left: 0, right: 0, borderTopWidth: 1, paddingHorizontal: 20, paddingVertical: 14 },
   submitBtn: { backgroundColor: Colors.gold, borderRadius: 16, paddingVertical: 16, alignItems: 'center' },
   submitBtnTxt: { color: Colors.navy, fontWeight: '800', fontSize: 16 },
