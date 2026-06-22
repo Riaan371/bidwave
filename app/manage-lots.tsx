@@ -212,7 +212,17 @@ export default function ManageLots() {
 
   return (
     <SafeAreaView style={[s.root, { backgroundColor: bg }]}>
-      <Stack.Screen options={{ headerShown: true, title: pickMode ? 'Select Lots' : 'Manage Lots', headerStyle: { backgroundColor: bg }, headerTintColor: ink }} />
+      <Stack.Screen options={{
+        headerShown: true,
+        title: pickMode ? 'Select Lots' : 'Manage Lots',
+        headerStyle: { backgroundColor: Colors.navy },
+        headerTintColor: '#fff',
+        headerRight: !pickMode ? () => (
+          <Pressable onPress={() => router.replace('/(tabs)/profile')} style={{ paddingHorizontal: 12, paddingVertical: 6 }}>
+            <Text style={{ color: Colors.gold, fontWeight: '700', fontSize: 14 }}>Profile →</Text>
+          </Pressable>
+        ) : undefined,
+      }} />
 
       {pickMode && selected.size > 0 && (
         <Pressable onPress={confirmPick} style={[s.confirmBar, { backgroundColor: Colors.primary }]}>
