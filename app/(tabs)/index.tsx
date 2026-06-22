@@ -11,15 +11,15 @@ import { ListSkeleton } from '../../components/Skeleton';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const CATEGORIES = [
-  { name: 'Vehicles',          abbr: 'CAR',  color: '#1E40AF' },
-  { name: 'Plant & Equipment', abbr: 'PLANT', color: '#92400E' },
-  { name: 'Livestock',         abbr: 'LIVE',  color: '#065F46' },
-  { name: 'Property',          abbr: 'PROP',  color: '#7C3AED' },
-  { name: 'Industrial',        abbr: 'IND',   color: '#374151' },
-  { name: 'Household',         abbr: 'HOME',  color: '#B45309' },
-  { name: 'Electronics',       abbr: 'ELEC',  color: '#0369A1' },
-  { name: 'Collectibles',      abbr: 'COLL',  color: '#BE185D' },
-  { name: 'Art & Jewellery',   abbr: 'ART',   color: '#9D174D' },
+  { name: 'Vehicles',          image: 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400&q=80' },
+  { name: 'Plant & Equipment', image: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400&q=80' },
+  { name: 'Livestock',         image: 'https://images.unsplash.com/photo-1516467508483-a7212febe31a?w=400&q=80' },
+  { name: 'Property',          image: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=400&q=80' },
+  { name: 'Industrial',        image: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=400&q=80' },
+  { name: 'Household',         image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=400&q=80' },
+  { name: 'Electronics',       image: 'https://images.unsplash.com/photo-1498049794561-7780e7231661?w=400&q=80' },
+  { name: 'Collectibles',      image: 'https://images.unsplash.com/photo-1547996160-81dfa63595aa?w=400&q=80' },
+  { name: 'Art & Jewellery',   image: 'https://images.unsplash.com/photo-1515405295579-ba7b45403062?w=400&q=80' },
 ];
 
 // Placeholder auction images per category
@@ -182,21 +182,22 @@ export default function Home() {
               </View>
             )}
 
-            {/* Categories - bidway style */}
+            {/* Categories - Bidway image grid */}
             <View style={{ paddingHorizontal: 16, marginBottom: 20 }}>
-              <Text style={[s.sectionTitle, { color: ink }]}>Browse by Category</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingVertical: 4 }}>
+              <Text style={[s.sectionTitle, { color: ink, marginBottom: 12 }]}>Browse by Category</Text>
+              <View style={s.catGrid}>
                 {CATEGORIES.map((cat) => (
                   <Pressable
                     key={cat.name}
                     onPress={() => router.push({ pathname: '/(tabs)/search', params: { category: cat.name } })}
-                    style={[s.catChip, { backgroundColor: cat.color }]}
+                    style={s.catTile}
                   >
-                    <Text style={s.catChipAbbr}>{cat.abbr}</Text>
-                    <Text style={s.catChipName}>{cat.name}</Text>
+                    <Image source={{ uri: cat.image }} style={s.catTileImg} resizeMode="cover" />
+                    <View style={s.catTileOverlay} />
+                    <Text style={s.catTileName}>{cat.name}</Text>
                   </Pressable>
                 ))}
-              </ScrollView>
+              </View>
             </View>
 
             {/* All Lots heading */}
@@ -258,8 +259,10 @@ const s = StyleSheet.create({
   auctionCardBtn: { backgroundColor: '#F97316', borderRadius: 8, paddingVertical: 10, alignItems: 'center' },
   auctionCardBtnTxt: { color: '#fff', fontWeight: '700', fontSize: 14 },
 
-  // Category chips (horizontal scroll)
-  catChip: { borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, alignItems: 'center', minWidth: 90 },
-  catChipAbbr: { color: 'rgba(255,255,255,0.6)', fontSize: 10, fontWeight: '800', letterSpacing: 1.2, marginBottom: 3 },
-  catChipName: { color: '#fff', fontSize: 11, fontWeight: '700', textAlign: 'center' },
+  // Category image grid (Bidway style)
+  catGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  catTile: { width: (SCREEN_WIDTH - 32 - 10) / 2, height: 90, borderRadius: 12, overflow: 'hidden', position: 'relative' },
+  catTileImg: { width: '100%', height: '100%' },
+  catTileOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.42)' },
+  catTileName: { position: 'absolute', bottom: 10, left: 10, right: 10, color: '#fff', fontWeight: '800', fontSize: 13 },
 });
