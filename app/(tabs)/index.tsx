@@ -1,7 +1,8 @@
-import { View, Text, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Dimensions, FlatList, Platform } from 'react-native';
+import { View, Text, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Dimensions, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../lib/auth-store';
 import { useAppTheme, Colors } from '../../lib/theme';
@@ -151,6 +152,23 @@ export default function Home() {
   const profile = useAuthStore((s) => s.profile);
   const { bg, ink, muted, border } = useAppTheme();
 
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [showInstall, setShowInstall] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handler = (e: any) => { e.preventDefault(); setInstallPrompt(e); setShowInstall(true); };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstall = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === 'accepted') setShowInstall(false);
+  };
+
   const { data: events, isRefetching, refetch } = useQuery({
     queryKey: ['auction-events'],
     queryFn: fetchAuctionEvents,
@@ -188,6 +206,22 @@ export default function Home() {
         {profile && (
           <View style={[s.welcomeBar, { borderBottomColor: border }]}>
             <Text style={[s.welcomeTxt, { color: muted }]}>Welcome back, <Text style={{ color: Colors.gold, fontWeight: '700' }}>{profile.full_name.split(' ')[0]}</Text></Text>
+          </View>
+        )}
+
+        {/* ── INSTALL BANNER ── */}
+        {showInstall && (
+          <View style={s.installBanner}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.installTitle}>📲 Add to Home Screen</Text>
+              <Text style={s.installSub}>Install the West Coast Pickers app for the best experience</Text>
+            </View>
+            <Pressable onPress={handleInstall} style={s.installBtn}>
+              <Text style={s.installBtnTxt}>Install</Text>
+            </Pressable>
+            <Pressable onPress={() => setShowInstall(false)} style={s.installDismiss}>
+              <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 18 }}>×</Text>
+            </Pressable>
           </View>
         )}
 
@@ -254,6 +288,12 @@ const s = StyleSheet.create({
 
   welcomeBar: { paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1 },
   welcomeTxt: { fontSize: 13 },
+  installBanner: { backgroundColor: Colors.navy, borderBottomWidth: 2, borderBottomColor: Colors.gold, paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  installTitle: { color: '#fff', fontWeight: '800', fontSize: 13 },
+  installSub: { color: 'rgba(255,255,255,0.65)', fontSize: 11, marginTop: 2 },
+  installBtn: { backgroundColor: Colors.gold, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8 },
+  installBtnTxt: { color: Colors.navy, fontWeight: '800', fontSize: 13 },
+  installDismiss: { padding: 4 },
 
   // Live banner
   liveBanner: { backgroundColor: Colors.navy, borderWidth: 1.5, borderColor: '#DC2626', borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
