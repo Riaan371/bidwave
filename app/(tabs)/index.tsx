@@ -1,4 +1,4 @@
-import { View, Text, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Dimensions, FlatList } from 'react-native';
+import { View, Text, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Dimensions, FlatList, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -9,17 +9,6 @@ import { useAppTheme, Colors } from '../../lib/theme';
 const { width: SW } = Dimensions.get('window');
 const CARD_W = SW > 600 ? 320 : SW * 0.78;
 
-const CATEGORIES = [
-  { name: 'Vehicles',          image: 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400&q=80' },
-  { name: 'Plant & Equipment', image: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400&q=80' },
-  { name: 'Livestock',         image: 'https://images.unsplash.com/photo-1516467508483-a7212febe31a?w=400&q=80' },
-  { name: 'Property',          image: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=400&q=80' },
-  { name: 'Industrial',        image: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=400&q=80' },
-  { name: 'Household',         image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=400&q=80' },
-  { name: 'Electronics',       image: 'https://images.unsplash.com/photo-1498049794561-7780e7231661?w=400&q=80' },
-  { name: 'Collectibles',      image: 'https://images.unsplash.com/photo-1547996160-81dfa63595aa?w=400&q=80' },
-  { name: 'Art & Jewellery',   image: 'https://images.unsplash.com/photo-1515405295579-ba7b45403062?w=400&q=80' },
-];
 
 async function fetchAuctionEvents() {
   // Live sessions (live + scheduled)
@@ -121,7 +110,10 @@ function AuctionEventCard({ session, photos }: { session: any; photos?: string[]
   const title = session.title ?? session.auctions?.title ?? 'Auction Event';
 
   return (
-    <Pressable style={s.eventCard} onPress={() => router.push(`/live/${session.auction_id}`)}>
+    <Pressable style={s.eventCard} onPress={() => isTimed
+      ? router.push(`/auction/${session.auction_id}`)
+      : router.push(`/live/${session.auction_id}`)
+    }>
       <PhotoCollage photos={photos ?? []} />
       <View style={s.eventImgOverlay} />
       {isLive && (
@@ -243,27 +235,6 @@ export default function Home() {
             <Text style={[s.emptyBody, { color: muted }]}>Check back soon — new events are added regularly.</Text>
           </View>
         )}
-
-        {/* ── BROWSE BY CATEGORY ── */}
-        <View style={s.section}>
-          <View style={s.sectionHeader}>
-            <Text style={[s.sectionTitle, { color: ink }]}>Browse by Category</Text>
-            <View style={s.goldLine} />
-          </View>
-          <View style={[s.catGrid, { paddingHorizontal: 16 }]}>
-            {CATEGORIES.map((cat) => (
-              <Pressable
-                key={cat.name}
-                onPress={() => router.push({ pathname: '/(tabs)/search', params: { category: cat.name } })}
-                style={s.catTile}
-              >
-                <Image source={{ uri: cat.image }} style={s.catTileImg} resizeMode="cover" />
-                <View style={s.catTileOverlay} />
-                <Text style={s.catTileName}>{cat.name}</Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
 
         <View style={{ height: 32 }} />
       </ScrollView>
