@@ -70,6 +70,36 @@ export default function ManageLots() {
     }
   };
 
+  const addImageFromFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      const base64 = dataUrl.split(',')[1];
+      setImages((prev) => prev.length < 6 ? [...prev, { uri: dataUrl, base64 }] : prev);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handlePaste = (e: any) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) addImageFromFile(file);
+      }
+    }
+  };
+
+  const handleDrop = (e: any) => {
+    e.preventDefault();
+    const files = e.dataTransfer?.files;
+    if (!files) return;
+    for (const file of files) {
+      if (file.type.startsWith('image/')) addImageFromFile(file);
+    }
+  };
+
   const createLot = useMutation({
     mutationFn: async () => {
       if (!session) throw new Error('Not logged in');
@@ -244,7 +274,15 @@ export default function ManageLots() {
             <Text style={[s.label, { color: muted }]}>Photos</Text>
             <View style={s.imageRow}>
               {images.map((img, i) => (
-                <Image key={i} source={{ uri: img.uri }} style={[s.thumb, { borderColor: border }]} />
+                <View key={i} style={{ position: 'relative' }}>
+                  <Image source={{ uri: img.uri }} style={[s.thumb, { borderColor: border }]} />
+                  <Pressable
+                    onPress={() => setImages((prev) => prev.filter((_, idx) => idx !== i))}
+                    style={s.removeThumb}
+                  >
+                    <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>✕</Text>
+                  </Pressable>
+                </View>
               ))}
               {images.length < 6 && (
                 <Pressable onPress={pickImage} style={[s.addThumb, { borderColor: border }]}>
@@ -252,6 +290,37 @@ export default function ManageLots() {
                 </Pressable>
               )}
             </View>
+            {/* Web paste / drag-and-drop zone */}
+            {typeof window !== 'undefined' && (
+              <div
+                onPaste={handlePaste}
+                onDrop={handleDrop}
+                onDragOver={(e: any) => e.preventDefault()}
+                style={{
+                  border: '2px dashed #C49A22',
+                  borderRadius: 10,
+                  padding: '12px',
+                  textAlign: 'center',
+                  color: '#9CA3AF',
+                  fontSize: 13,
+                  marginTop: 8,
+                  cursor: 'pointer',
+                  backgroundColor: 'rgba(196,154,34,0.05)',
+                }}
+                onClick={() => {
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = 'image/*';
+                  input.multiple = true;
+                  input.onchange = (e: any) => {
+                    for (const file of e.target.files) addImageFromFile(file);
+                  };
+                  input.click();
+                }}
+              >
+                📋 Paste image (Ctrl+V) · Drag & drop · or click to browse
+              </div>
+            )}
 
             <Text style={[s.label, { color: muted }]}>Title *</Text>
             <TextInput value={title} onChangeText={setTitle} placeholder="e.g. 2018 Toyota Hilux" placeholderTextColor="#9CA3AF" style={[inputStyle, s.mb]} />
@@ -461,6 +530,7 @@ const s = StyleSheet.create({
   imageRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
   thumb: { width: 72, height: 72, borderRadius: 10, borderWidth: 1 },
   addThumb: { width: 72, height: 72, borderRadius: 10, borderWidth: 2, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
+  removeThumb: { position: 'absolute', top: -6, right: -6, backgroundColor: '#DC2626', borderRadius: 10, width: 20, height: 20, alignItems: 'center', justifyContent: 'center', zIndex: 10 },
   removePhotoBtn: { position: 'absolute', top: -6, right: -6, backgroundColor: '#ef4444', borderRadius: 10, width: 20, height: 20, alignItems: 'center', justifyContent: 'center' },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   chip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 99, borderWidth: 1 },
