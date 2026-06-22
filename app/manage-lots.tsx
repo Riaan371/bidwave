@@ -23,6 +23,7 @@ export default function ManageLots() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showCreate, setShowCreate] = useState(false);
   const [editingLot, setEditingLot] = useState<any | null>(null);
+  const [savedMsg, setSavedMsg] = useState('');
 
   // Create lot form state
   const [images, setImages] = useState<{ uri: string; base64: string | null }[]>([]);
@@ -100,15 +101,20 @@ export default function ManageLots() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['auctioneer-lots'] });
       queryClient.invalidateQueries({ queryKey: ['lots'] });
-      // Reset form
       setTitle(''); setDescription(''); setStartingBid(''); setReserve(''); setBuyNow(''); setIncrement('500'); setImages([]);
       setShowCreate(false);
+      setSavedMsg('✅ Lot saved to your inventory!');
+      setTimeout(() => setSavedMsg(''), 4000);
+      // Scroll down to show the saved lot in the list
+      setTimeout(() => scrollRef.current?.scrollToEnd?.({ animated: true }), 300);
       if (pickMode && data?.id) {
         setSelected((prev) => { const s = new Set(prev); s.add(data.id); return s; });
       }
-      Alert.alert('Lot created', 'Added to your inventory.');
     },
-    onError: (e: any) => Alert.alert('Error', e.message),
+    onError: (e: any) => {
+      setSavedMsg('❌ Error: ' + e.message);
+      setTimeout(() => setSavedMsg(''), 6000);
+    },
   });
 
   const openEdit = (lot: any) => {
@@ -285,6 +291,13 @@ export default function ManageLots() {
           </View>
         )}
 
+        {/* Save confirmation banner */}
+        {!!savedMsg && (
+          <View style={[s.savedBanner, { backgroundColor: savedMsg.startsWith('✅') ? '#ECFDF5' : '#FEF2F2', borderColor: savedMsg.startsWith('✅') ? '#6EE7B7' : '#FECACA' }]}>
+            <Text style={{ color: savedMsg.startsWith('✅') ? '#065F46' : '#DC2626', fontWeight: '700', fontSize: 14 }}>{savedMsg}</Text>
+          </View>
+        )}
+
         {/* Existing lots */}
         <Text style={[s.sectionTitle, { color: ink }]}>
           {pickMode ? 'Select lots for the live session:' : 'Your Lots'}
@@ -421,6 +434,7 @@ export default function ManageLots() {
 const s = StyleSheet.create({
   root: { flex: 1 },
   confirmBar: { padding: 14, alignItems: 'center' },
+  savedBanner: { borderWidth: 1, borderRadius: 12, padding: 14, marginBottom: 12 },
   confirmTxt: { color: '#fff', fontWeight: '700', fontSize: 15 },
   createToggle: { borderWidth: 1.5, borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginBottom: 16 },
   createForm: { borderWidth: 1, borderRadius: 16, padding: 16, marginBottom: 20 },
