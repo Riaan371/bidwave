@@ -1,7 +1,7 @@
 import { View, Text, Image, Pressable, StyleSheet, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { MaterialIcons } from '@expo/vector-icons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../lib/auth-store';
 import { useAppTheme, Colors } from '../lib/theme';

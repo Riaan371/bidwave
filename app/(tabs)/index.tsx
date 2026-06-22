@@ -2,7 +2,8 @@ import { View, Text, FlatList, Image, Pressable, RefreshControl, ScrollView, Sty
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../lib/auth-store';
 import { useAppTheme, Colors } from '../../lib/theme';
