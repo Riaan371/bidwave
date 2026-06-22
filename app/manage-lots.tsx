@@ -94,7 +94,6 @@ export default function ManageLots() {
         reserve: reserve ? Number(reserve) : null,
         buy_now: buyNow ? Number(buyNow) : null,
         increment: Number(increment) || 500,
-        auctioneer_id: session.user.id,
       }).select('id').single();
       if (error) throw error;
       return data;
