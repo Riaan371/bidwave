@@ -58,6 +58,7 @@ export default function ScheduleLive() {
           title: title.trim(),
           auctioneer_id: session.user.id,
           type: auctionType,
+          status: auctionType === 'timed' ? 'active' : 'scheduled',
           end_at: deadlineAt ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         })
         .select('id')
