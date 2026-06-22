@@ -197,6 +197,49 @@ function AuctioneerPanel({ userId, ink, muted, card, border }: { userId: string;
   );
 }
 
+function ScreenNameEditor({ userId, currentName, ink, muted, card, border }: { userId: string; currentName: string | null; ink: string; muted: string; card: string; border: string }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(currentName ?? '');
+  const [saving, setSaving] = useState(false);
+  const loadProfile = useAuthStore((s) => s.loadProfile);
+
+  const save = async () => {
+    if (!value.trim()) return;
+    setSaving(true);
+    await supabase.from('users').update({ screen_name: value.trim() }).eq('id', userId);
+    await loadProfile();
+    setSaving(false);
+    setEditing(false);
+  };
+
+  return (
+    <View style={[{ borderWidth: 1, borderRadius: 14, padding: 14, marginBottom: 12 }, { borderColor: border, backgroundColor: card }]}>
+      <Text style={{ color: ink, fontWeight: '700', fontSize: 14, marginBottom: 8 }}>🎭 Screen Name</Text>
+      <Text style={{ color: muted, fontSize: 12, marginBottom: 10 }}>This name is shown when you place bids</Text>
+      {editing ? (
+        <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+          <TextInput value={value} onChangeText={setValue} placeholder="Enter screen name" placeholderTextColor={muted}
+            style={{ flex: 1, borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, borderColor: border, color: ink, fontSize: 14 }} />
+          <Pressable onPress={save} disabled={saving} style={{ backgroundColor: '#0B5FFF', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 9 }}>
+            {saving ? <ActivityIndicator color="#fff" size="small" /> : <Text style={{ color: '#fff', fontWeight: '700' }}>Save</Text>}
+          </Pressable>
+          <Pressable onPress={() => setEditing(false)}>
+            <Text style={{ color: muted, fontSize: 13 }}>Cancel</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Text style={{ color: ink, fontSize: 15, fontWeight: '600' }}>{currentName ?? 'Not set'}</Text>
+          <Pressable onPress={() => { setValue(currentName ?? ''); setEditing(true); }}
+            style={{ borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, borderColor: border }}>
+            <Text style={{ color: ink, fontSize: 13 }}>Edit</Text>
+          </Pressable>
+        </View>
+      )}
+    </View>
+  );
+}
+
 export default function Profile() {
   const session = useAuthStore((s) => s.session);
   const profile = useAuthStore((s) => s.profile);
@@ -282,6 +325,11 @@ export default function Profile() {
             </View>
           </View>
         </View>
+
+        {/* Screen name for bidders */}
+        {profile.role !== 'auctioneer' && (
+          <ScreenNameEditor userId={session.user.id} currentName={(profile as any).screen_name ?? null} ink={ink} muted={muted} card={card} border={border} />
+        )}
 
         {/* Auctioneer actions */}
         {profile.role === 'auctioneer' && (

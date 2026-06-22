@@ -62,12 +62,12 @@ export default function LotDetail() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('bids')
-        .select('id, amount, placed_at, bidder_id, users(full_name)')
+        .select('id, amount, placed_at, bidder_id, users(full_name, screen_name)')
         .eq('lot_id', id)
         .order('amount', { ascending: false })
         .limit(20);
       if (error) throw error;
-      return data as { id: string; amount: number; placed_at: string; bidder_id: string; users: { full_name: string } | null }[];
+      return data as { id: string; amount: number; placed_at: string; bidder_id: string; users: { full_name: string; screen_name: string | null } | null }[];
     },
   });
 
@@ -261,7 +261,7 @@ export default function LotDetail() {
           <Text style={[s.historyLabel, { color: muted }]}>Bid history</Text>
           {bids && bids.length > 0 ? (
             bids.map((b, i) => {
-              const name = b.users?.full_name ?? 'Anonymous';
+              const name = b.users?.screen_name ?? b.users?.full_name ?? 'Bidder';
               const initials = name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2);
               const isMe = session && b.bidder_id === session.user.id;
               return (
