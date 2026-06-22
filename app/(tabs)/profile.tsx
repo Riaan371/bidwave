@@ -8,7 +8,6 @@ import { useThemeStore } from '../../lib/theme-store';
 import { supabase } from '../../lib/supabase';
 import { Colors } from '../../lib/theme';
 
-
 function ExportReport({ ink, muted, card, border }: { ink: string; muted: string; card: string; border: string }) {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
@@ -48,12 +47,11 @@ function ExportReport({ ink, muted, card, border }: { ink: string; muted: string
         ]),
       ];
 
-      // Add totals row
       const total = (data as any[]).reduce((sum, s) => sum + Number(s.sale_price), 0);
       rows.push(['', '', '', 'TOTAL', total]);
 
       const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
-      const filename = `BidWave_Sales_${fromDate.replace(/\//g, '-')}_to_${toDate.replace(/\//g, '-')}.csv`;
+      const filename = `WCP_Sales_${fromDate.replace(/\//g, '-')}_to_${toDate.replace(/\//g, '-')}.csv`;
 
       if (Platform.OS === 'web') {
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -62,7 +60,7 @@ function ExportReport({ ink, muted, card, border }: { ink: string; muted: string
         a.href = url; a.download = filename; a.click();
         URL.revokeObjectURL(url);
       } else {
-        Alert.alert('Export ready', 'Excel export is available on the web version of BidWave.');
+        Alert.alert('Export ready', 'Excel export is available on the web version.');
       }
     } catch (e: any) {
       Alert.alert('Export failed', e.message);
@@ -76,24 +74,18 @@ function ExportReport({ ink, muted, card, border }: { ink: string; muted: string
       <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
         <View style={{ flex: 1 }}>
           <Text style={{ color: muted, fontSize: 11, fontWeight: '600', marginBottom: 4 }}>FROM (DD/MM/YYYY)</Text>
-          <TextInput
-            value={fromDate} onChangeText={setFromDate} placeholder="01/06/2026"
-            placeholderTextColor="#9CA3AF"
-            style={{ borderWidth: 1, borderColor: border, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, color: ink, fontSize: 13 }}
-          />
+          <TextInput value={fromDate} onChangeText={setFromDate} placeholder="01/06/2026" placeholderTextColor="#9CA3AF"
+            style={{ borderWidth: 1, borderColor: border, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, color: ink, fontSize: 13 }} />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={{ color: muted, fontSize: 11, fontWeight: '600', marginBottom: 4 }}>TO (DD/MM/YYYY)</Text>
-          <TextInput
-            value={toDate} onChangeText={setToDate} placeholder="30/06/2026"
-            placeholderTextColor="#9CA3AF"
-            style={{ borderWidth: 1, borderColor: border, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, color: ink, fontSize: 13 }}
-          />
+          <TextInput value={toDate} onChangeText={setToDate} placeholder="30/06/2026" placeholderTextColor="#9CA3AF"
+            style={{ borderWidth: 1, borderColor: border, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, color: ink, fontSize: 13 }} />
         </View>
       </View>
       <Pressable onPress={exportCSV} disabled={loading}
         style={{ backgroundColor: '#16A34A', borderRadius: 12, paddingVertical: 13, alignItems: 'center', opacity: loading ? 0.7 : 1 }}>
-        {loading ? <ActivityIndicator color="#fff" /> : <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>⬇ Download Excel / CSV</Text>}
+        {loading ? <ActivityIndicator color="#fff" /> : <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>⬇ Download CSV</Text>}
       </Pressable>
     </View>
   );
@@ -154,17 +146,17 @@ function AuctioneerPanel({ userId, ink, muted, card, border }: { userId: string;
 
   return (
     <View style={{ marginBottom: 12 }}>
-      <Pressable onPress={() => router.push('/manage-lots')} style={[s.btn, { backgroundColor: '#0B5FFF', marginBottom: 12 }]}>
+      <Pressable onPress={() => router.push('/manage-lots')} style={[s.btn, { backgroundColor: Colors.navy, marginBottom: 10 }]}>
         <Text style={[s.btnText, { color: '#fff' }]}>📦 Manage Lots</Text>
       </Pressable>
-      <Pressable onPress={() => router.push('/schedule-live')} style={[s.btn, { backgroundColor: '#DC2626', marginBottom: 12 }]}>
-        <Text style={[s.btnText, { color: '#fff' }]}>🔴 Schedule / Go Live</Text>
+      <Pressable onPress={() => router.push('/schedule-live')} style={[s.btn, { backgroundColor: Colors.gold, marginBottom: 12 }]}>
+        <Text style={[s.btnText, { color: Colors.navy }]}>🔴 Schedule / Go Live</Text>
       </Pressable>
 
       <ExportReport ink={ink} muted={muted} card={card} border={border} />
 
       {sessions && sessions.length > 0 && (
-        <View style={[{ borderWidth: 1, borderRadius: 14, padding: 14, marginTop: 12 }, { borderColor: border, backgroundColor: card }]}>
+        <View style={[{ borderWidth: 1, borderRadius: 14, padding: 14, marginTop: 4 }, { borderColor: border, backgroundColor: card }]}>
           <Text style={{ color: ink, fontWeight: '700', fontSize: 14, marginBottom: 10 }}>Scheduled Sessions</Text>
           {sessions.map((s2) => {
             const dt = s2.scheduled_at ? new Date(s2.scheduled_at) : null;
@@ -174,7 +166,7 @@ function AuctioneerPanel({ userId, ink, muted, card, border }: { userId: string;
                 <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: ink, fontWeight: '700', fontSize: 14 }}>{s2.title ?? 'Untitled'}</Text>
-                    <Text style={{ color: '#DC2626', fontSize: 12, fontWeight: '600', marginTop: 2 }}>📅 {dateStr}</Text>
+                    <Text style={{ color: Colors.gold, fontSize: 12, fontWeight: '600', marginTop: 2 }}>📅 {dateStr}</Text>
                   </View>
                   <View style={{ flexDirection: 'row', gap: 6, marginLeft: 8 }}>
                     <Pressable onPress={() => goLive(s2.id)} style={{ paddingHorizontal: 10, paddingVertical: 5, backgroundColor: 'rgba(22,163,74,0.1)', borderRadius: 8 }}>
@@ -214,14 +206,14 @@ function ScreenNameEditor({ userId, currentName, ink, muted, card, border }: { u
 
   return (
     <View style={[{ borderWidth: 1, borderRadius: 14, padding: 14, marginBottom: 12 }, { borderColor: border, backgroundColor: card }]}>
-      <Text style={{ color: ink, fontWeight: '700', fontSize: 14, marginBottom: 8 }}>🎭 Screen Name</Text>
+      <Text style={{ color: ink, fontWeight: '700', fontSize: 14, marginBottom: 4 }}>🎭 Screen Name</Text>
       <Text style={{ color: muted, fontSize: 12, marginBottom: 10 }}>This name is shown when you place bids</Text>
       {editing ? (
         <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
           <TextInput value={value} onChangeText={setValue} placeholder="Enter screen name" placeholderTextColor={muted}
             style={{ flex: 1, borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, borderColor: border, color: ink, fontSize: 14 }} />
-          <Pressable onPress={save} disabled={saving} style={{ backgroundColor: '#0B5FFF', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 9 }}>
-            {saving ? <ActivityIndicator color="#fff" size="small" /> : <Text style={{ color: '#fff', fontWeight: '700' }}>Save</Text>}
+          <Pressable onPress={save} disabled={saving} style={{ backgroundColor: Colors.gold, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 9 }}>
+            {saving ? <ActivityIndicator color={Colors.navy} size="small" /> : <Text style={{ color: Colors.navy, fontWeight: '700' }}>Save</Text>}
           </Pressable>
           <Pressable onPress={() => setEditing(false)}>
             <Text style={{ color: muted, fontSize: 13 }}>Cancel</Text>
@@ -231,8 +223,8 @@ function ScreenNameEditor({ userId, currentName, ink, muted, card, border }: { u
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <Text style={{ color: ink, fontSize: 15, fontWeight: '600' }}>{currentName ?? 'Not set'}</Text>
           <Pressable onPress={() => { setValue(currentName ?? ''); setEditing(true); }}
-            style={{ borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, borderColor: border }}>
-            <Text style={{ color: ink, fontSize: 13 }}>Edit</Text>
+            style={{ borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, borderColor: Colors.gold }}>
+            <Text style={{ color: Colors.gold, fontSize: 13, fontWeight: '600' }}>Edit</Text>
           </Pressable>
         </View>
       )}
@@ -248,11 +240,11 @@ export default function Profile() {
   const toggleTheme = useThemeStore((s) => s.toggle);
   const dark = theme === 'dark';
 
-  const bg = dark ? '#09090b' : '#f8f9fa';
-  const card = dark ? '#18181b' : '#ffffff';
-  const border = dark ? '#27272a' : '#e5e7eb';
-  const ink = dark ? '#ffffff' : '#0F172A';
-  const muted = dark ? 'rgba(255,255,255,0.5)' : 'rgba(15,23,42,0.5)';
+  const bg = dark ? '#080E18' : '#F8F7F4';
+  const card = dark ? '#0D1B2E' : '#ffffff';
+  const border = dark ? '#1B2B4B' : '#E5E7EB';
+  const ink = dark ? '#F1F5F9' : '#0F172A';
+  const muted = dark ? 'rgba(241,245,249,0.45)' : 'rgba(15,23,42,0.5)';
 
   const ThemeToggle = (
     <View style={[s.card, { backgroundColor: card, borderColor: border }]}>
@@ -260,69 +252,61 @@ export default function Profile() {
         <Text style={[s.cardTitle, { color: ink }]}>Dark mode</Text>
         <Text style={[s.cardSub, { color: muted }]}>Easier on the eyes at night</Text>
       </View>
-      <Switch value={dark} onValueChange={toggleTheme} trackColor={{ true: '#0B5FFF', false: '#d1d5db' }} thumbColor="#fff" />
+      <Switch value={dark} onValueChange={toggleTheme} trackColor={{ true: Colors.gold, false: '#d1d5db' }} thumbColor="#fff" />
     </View>
   );
 
+  // ── GUEST VIEW ──
   if (!session || !profile) {
     return (
-      <SafeAreaView style={[s.root, { backgroundColor: bg }]}>
-        <View style={s.center}>
-          <Text style={[s.heading, { color: ink, marginBottom: 8 }]}>You're browsing as a guest</Text>
-          <Text style={[s.cardSub, { color: muted, textAlign: 'center', marginBottom: 24 }]}>
-            Create an account to place bids, save lots, and track your wins.
-          </Text>
-          <Pressable onPress={() => router.push('/(auth)/role')} style={[s.btn, { backgroundColor: '#0B5FFF', width: 240 }]}>
-            <Text style={[s.btnText, { color: '#fff' }]}>Create an account</Text>
-          </Pressable>
-          <Pressable onPress={() => router.push('/(auth)/login')} style={{ marginTop: 16 }}>
-            <Text style={{ color: '#0B5FFF', fontSize: 14, textDecorationLine: 'underline' }}>I already have an account</Text>
-          </Pressable>
-          <View style={{ width: '100%', marginTop: 32 }}>{ThemeToggle}</View>
+      <SafeAreaView style={{ flex: 1, backgroundColor: Colors.navy }}>
+        <View style={s.guestRoot}>
+          <Image source={require('../../assets/logo.png')} style={s.guestLogo} resizeMode="contain" />
+          <Text style={s.guestBrand}>West Coast Pickers</Text>
+          <Text style={s.guestTagline}>South Africa's Live Auction Marketplace</Text>
+
+          <View style={s.guestCard}>
+            <Text style={s.guestHeading}>Join the Auction</Text>
+            <Text style={s.guestSub}>Create an account to place bids, save lots, and track your wins.</Text>
+            <Pressable onPress={() => router.push('/(auth)/role')} style={s.guestBtn}>
+              <Text style={s.guestBtnTxt}>Create an Account</Text>
+            </Pressable>
+            <Pressable onPress={() => router.push('/(auth)/login')} style={{ alignItems: 'center', marginTop: 14 }}>
+              <Text style={{ color: Colors.gold, fontSize: 14, fontWeight: '600' }}>I already have an account</Text>
+            </Pressable>
+          </View>
+
+          <View style={{ width: '100%', marginTop: 20 }}>{ThemeToggle}</View>
         </View>
       </SafeAreaView>
     );
   }
 
-  const roleColor = profile.role === 'auctioneer' ? '#0B5FFF' : '#16A34A';
+  // ── LOGGED IN VIEW ──
+  const roleColor = profile.role === 'auctioneer' ? Colors.gold : '#16A34A';
   const kycColor = profile.kyc_status === 'approved' ? '#16A34A' : profile.kyc_status === 'pending' ? '#D97706' : '#DC2626';
 
   return (
     <SafeAreaView style={[s.root, { backgroundColor: bg }]}>
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
-        <Text style={[s.heading, { color: ink, marginBottom: 20 }]}>Profile</Text>
+      {/* Profile header banner */}
+      <View style={s.profileBanner}>
+        <Image source={require('../../assets/logo.png')} style={s.bannerLogo} resizeMode="contain" />
+        <View style={{ flex: 1 }}>
+          <Text style={s.bannerName}>{profile.full_name}</Text>
+          <Text style={s.bannerEmail}>{profile.email}</Text>
+        </View>
+      </View>
 
-        {/* Avatar + name card */}
-        <View style={[s.card, { backgroundColor: card, borderColor: border, marginBottom: 12 }]}>
-          <View style={s.avatarRow}>
-            {profile.role === 'auctioneer' ? (
-              <Image source={require('../../assets/icon.png')} style={[s.avatar, { borderRadius: 16 }]} resizeMode="cover" />
-            ) : (
-              <View style={s.avatar}>
-                <Text style={s.avatarLetter}>{profile.full_name?.[0]?.toUpperCase() ?? '?'}</Text>
-              </View>
-            )}
-            <View style={{ flex: 1 }}>
-              {profile.role === 'auctioneer' && (
-                <Text style={[s.cardTitle, { color: ink, fontSize: 13, fontWeight: '600', marginBottom: 2 }]}>West Coast Pickers</Text>
-              )}
-              <Text style={[s.cardTitle, { color: ink, fontSize: 18 }]}>{profile.full_name}</Text>
-              <Text style={[s.cardSub, { color: muted }]}>{profile.email}</Text>
-              {profile.phone ? <Text style={[s.cardSub, { color: muted }]}>{profile.phone}</Text> : null}
-            </View>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+        {/* Role / KYC pills */}
+        <View style={[s.card, { backgroundColor: card, borderColor: border, marginBottom: 12, flexDirection: 'row', gap: 8 }]}>
+          <View style={[s.pill, { backgroundColor: `${roleColor}18` }]}>
+            <View style={[s.pillDot, { backgroundColor: roleColor }]} />
+            <Text style={[s.pillText, { color: roleColor }]}>{profile.role}</Text>
           </View>
-
-          <View style={s.divider} />
-
-          <View style={s.row}>
-            <View style={s.pill}>
-              <View style={[s.pillDot, { backgroundColor: roleColor }]} />
-              <Text style={[s.pillText, { color: roleColor }]}>{profile.role}</Text>
-            </View>
-            <View style={[s.pill, { marginLeft: 8 }]}>
-              <View style={[s.pillDot, { backgroundColor: kycColor }]} />
-              <Text style={[s.pillText, { color: kycColor }]}>KYC {profile.kyc_status}</Text>
-            </View>
+          <View style={[s.pill, { backgroundColor: `${kycColor}18` }]}>
+            <View style={[s.pillDot, { backgroundColor: kycColor }]} />
+            <Text style={[s.pillText, { color: kycColor }]}>KYC {profile.kyc_status}</Text>
           </View>
         </View>
 
@@ -340,11 +324,8 @@ export default function Profile() {
         <View style={{ marginBottom: 12 }}>{ThemeToggle}</View>
 
         {/* Sign out */}
-        <Pressable
-          onPress={signOut}
-          style={[s.btn, { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: '#DC2626' }]}
-        >
-          <Text style={[s.btnText, { color: '#DC2626' }]}>Sign out</Text>
+        <Pressable onPress={signOut} style={[s.btn, { borderWidth: 1.5, borderColor: '#DC2626', backgroundColor: 'transparent' }]}>
+          <Text style={[s.btnText, { color: '#DC2626' }]}>Sign Out</Text>
         </Pressable>
       </ScrollView>
     </SafeAreaView>
@@ -353,37 +334,34 @@ export default function Profile() {
 
 const s = StyleSheet.create({
   root: { flex: 1 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  heading: { fontSize: 26, fontWeight: '700' },
-  card: {
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 16,
-    flexDirection: 'column',
-  },
+
+  // Guest
+  guestRoot: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28 },
+  guestLogo: { width: 100, height: 100, marginBottom: 14 },
+  guestBrand: { color: '#fff', fontSize: 22, fontWeight: '800', letterSpacing: 0.3, marginBottom: 4 },
+  guestTagline: { color: 'rgba(255,255,255,0.45)', fontSize: 12, marginBottom: 32 },
+  guestCard: { width: '100%', backgroundColor: '#fff', borderRadius: 20, padding: 24 },
+  guestHeading: { fontSize: 20, fontWeight: '800', color: Colors.navy, marginBottom: 6 },
+  guestSub: { fontSize: 13, color: 'rgba(15,23,42,0.55)', marginBottom: 20, lineHeight: 19 },
+  guestBtn: { backgroundColor: Colors.gold, borderRadius: 12, paddingVertical: 15, alignItems: 'center' },
+  guestBtnTxt: { color: Colors.navy, fontWeight: '800', fontSize: 16 },
+
+  // Profile banner
+  profileBanner: { backgroundColor: Colors.navy, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, gap: 12 },
+  bannerLogo: { width: 44, height: 44 },
+  bannerName: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  bannerEmail: { color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 2 },
+
+  // Cards
+  card: { borderWidth: 1, borderRadius: 16, padding: 14 },
   cardTitle: { fontSize: 15, fontWeight: '600' },
   cardSub: { fontSize: 13, marginTop: 2 },
-  avatarRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  avatar: {
-    width: 52, height: 52, borderRadius: 26,
-    backgroundColor: '#0B5FFF',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  avatarLetter: { color: '#fff', fontSize: 22, fontWeight: '700' },
-  divider: { height: 1, backgroundColor: 'rgba(150,150,150,0.15)', marginVertical: 14 },
-  row: { flexDirection: 'row', alignItems: 'center' },
-  pill: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 10, paddingVertical: 4,
-    borderRadius: 99,
-    backgroundColor: 'rgba(150,150,150,0.1)',
-  },
+
+  // Pills
+  pill: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99 },
   pillDot: { width: 7, height: 7, borderRadius: 4, marginRight: 5 },
   pillText: { fontSize: 12, fontWeight: '600', textTransform: 'capitalize' },
-  btn: {
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
+
+  btn: { borderRadius: 14, paddingVertical: 14, alignItems: 'center' },
   btnText: { fontSize: 15, fontWeight: '700' },
 });
