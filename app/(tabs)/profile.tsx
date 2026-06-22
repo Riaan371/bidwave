@@ -8,6 +8,116 @@ import { useThemeStore } from '../../lib/theme-store';
 import { supabase } from '../../lib/supabase';
 import { Colors } from '../../lib/theme';
 
+function ActiveLotsPanel({ userId, ink, muted, card, border }: { userId: string; ink: string; muted: string; card: string; border: string }) {
+  const [expanded, setExpanded] = useState(true);
+
+  const { data: lots, isLoading } = useQuery({
+    queryKey: ['profile-lots', userId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('lots')
+        .select('id, title, photos, starting_bid, current_bid, category, auction_id, auctions(title, status)')
+        .eq('auctioneer_id', userId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const inAuction = (lots ?? []).filter((l: any) => !!l.auction_id);
+  const inventory = (lots ?? []).filter((l: any) => !l.auction_id);
+
+  // Group by auction
+  const groups: Record<string, { title: string; status: string; lots: any[] }> = {};
+  for (const lot of inAuction) {
+    const aid = lot.auction_id;
+    if (!groups[aid]) groups[aid] = { title: (lot as any).auctions?.title ?? 'Auction', status: (lot as any).auctions?.status ?? '', lots: [] };
+    groups[aid].lots.push(lot);
+  }
+
+  if (!lots || lots.length === 0) return null;
+
+  return (
+    <View style={[{ borderWidth: 1, borderRadius: 14, marginTop: 12 }, { borderColor: border, backgroundColor: card }]}>
+      <Pressable onPress={() => setExpanded(v => !v)}
+        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14 }}>
+        <Text style={{ color: ink, fontWeight: '700', fontSize: 14 }}>🔨 My Lots ({lots.length})</Text>
+        <Text style={{ color: muted, fontSize: 14 }}>{expanded ? '▲' : '▼'}</Text>
+      </Pressable>
+
+      {expanded && (
+        <View style={{ paddingHorizontal: 12, paddingBottom: 12 }}>
+          {isLoading && <ActivityIndicator color={Colors.gold} style={{ marginBottom: 12 }} />}
+
+          {Object.entries(groups).map(([aid, group]) => (
+            <View key={aid} style={{ marginBottom: 10 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                <Text style={{ color: Colors.gold, fontWeight: '700', fontSize: 12, flex: 1 }}>📦 {group.title}</Text>
+                <View style={{ backgroundColor: group.status === 'active' ? '#16A34A' : '#6B7280', borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2 }}>
+                  <Text style={{ color: '#fff', fontSize: 9, fontWeight: '700' }}>{group.status.toUpperCase()}</Text>
+                </View>
+              </View>
+              {group.lots.map((lot: any) => (
+                <View key={lot.id} style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: border, borderRadius: 10, padding: 8, marginBottom: 6, backgroundColor: 'rgba(0,0,0,0.02)' }}>
+                  {lot.photos?.[0] ? (
+                    <Image source={{ uri: lot.photos[0] }} style={{ width: 46, height: 46, borderRadius: 8 }} />
+                  ) : (
+                    <View style={{ width: 46, height: 46, borderRadius: 8, backgroundColor: '#E5E7EB', alignItems: 'center', justifyContent: 'center' }}>
+                      <Text style={{ fontSize: 20 }}>📷</Text>
+                    </View>
+                  )}
+                  <View style={{ flex: 1, marginLeft: 10 }}>
+                    <Text style={{ color: ink, fontWeight: '600', fontSize: 13 }} numberOfLines={1}>{lot.title}</Text>
+                    <Text style={{ color: muted, fontSize: 11 }}>
+                      R{((lot.current_bid ?? lot.starting_bid) ?? 0).toLocaleString('en-ZA')} · {lot.category ?? '—'}
+                    </Text>
+                  </View>
+                  <Pressable onPress={() => router.push('/manage-lots')}
+                    style={{ backgroundColor: Colors.navy, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, marginLeft: 8 }}>
+                    <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>✏️ Edit</Text>
+                  </Pressable>
+                </View>
+              ))}
+            </View>
+          ))}
+
+          {inventory.length > 0 && (
+            <View>
+              <Text style={{ color: muted, fontWeight: '700', fontSize: 12, marginBottom: 6 }}>🗃 Inventory (unpublished)</Text>
+              {inventory.map((lot: any) => (
+                <View key={lot.id} style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: border, borderRadius: 10, padding: 8, marginBottom: 6 }}>
+                  {lot.photos?.[0] ? (
+                    <Image source={{ uri: lot.photos[0] }} style={{ width: 46, height: 46, borderRadius: 8 }} />
+                  ) : (
+                    <View style={{ width: 46, height: 46, borderRadius: 8, backgroundColor: '#E5E7EB', alignItems: 'center', justifyContent: 'center' }}>
+                      <Text style={{ fontSize: 20 }}>📷</Text>
+                    </View>
+                  )}
+                  <View style={{ flex: 1, marginLeft: 10 }}>
+                    <Text style={{ color: ink, fontWeight: '600', fontSize: 13 }} numberOfLines={1}>{lot.title}</Text>
+                    <Text style={{ color: muted, fontSize: 11 }}>
+                      R{((lot.current_bid ?? lot.starting_bid) ?? 0).toLocaleString('en-ZA')} · {lot.category ?? '—'}
+                    </Text>
+                  </View>
+                  <Pressable onPress={() => router.push('/manage-lots')}
+                    style={{ backgroundColor: Colors.navy, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, marginLeft: 8 }}>
+                    <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>✏️ Edit</Text>
+                  </Pressable>
+                </View>
+              ))}
+            </View>
+          )}
+
+          <Pressable onPress={() => router.push('/manage-lots')}
+            style={{ marginTop: 4, padding: 10, borderRadius: 10, borderWidth: 1, borderColor: Colors.gold, alignItems: 'center' }}>
+            <Text style={{ color: Colors.gold, fontWeight: '700', fontSize: 13 }}>Open Manage Lots →</Text>
+          </Pressable>
+        </View>
+      )}
+    </View>
+  );
+}
+
 function ExportReport({ ink, muted, card, border }: { ink: string; muted: string; card: string; border: string }) {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
@@ -152,6 +262,8 @@ function AuctioneerPanel({ userId, ink, muted, card, border }: { userId: string;
       <Pressable onPress={() => router.push('/schedule-live')} style={[s.btn, { backgroundColor: Colors.gold, marginBottom: 12 }]}>
         <Text style={[s.btnText, { color: Colors.navy }]}>🔴 Schedule / Go Live</Text>
       </Pressable>
+
+      <ActiveLotsPanel userId={userId} ink={ink} muted={muted} card={card} border={border} />
 
       <ExportReport ink={ink} muted={muted} card={card} border={border} />
 
