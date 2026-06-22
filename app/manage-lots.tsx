@@ -248,6 +248,12 @@ export default function ManageLots() {
         title: pickMode ? 'Select Lots' : 'Manage Lots',
         headerStyle: { backgroundColor: Colors.navy },
         headerTintColor: '#fff',
+        headerTitleStyle: { color: '#fff' },
+        headerLeft: () => (
+          <Pressable onPress={() => router.back()} style={{ paddingHorizontal: 12, paddingVertical: 6 }}>
+            <Text style={{ color: '#fff', fontSize: 22, fontWeight: '300' }}>‹</Text>
+          </Pressable>
+        ),
         headerRight: !pickMode ? () => (
           <Pressable onPress={() => router.replace('/(tabs)/profile')} style={{ paddingHorizontal: 12, paddingVertical: 6 }}>
             <Text style={{ color: Colors.gold, fontWeight: '700', fontSize: 14 }}>Profile →</Text>
