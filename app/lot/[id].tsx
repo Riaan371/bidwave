@@ -31,6 +31,7 @@ export default function LotDetail() {
       if (error) throw error;
       return data as Lot & { auctions: { end_at: string | null } | null };
     },
+    refetchInterval: 5000,
   });
 
   const { data: liveSession } = useQuery({
@@ -46,6 +47,7 @@ export default function LotDetail() {
       return data;
     },
     enabled: !!lot?.auction_id,
+    refetchInterval: 4000,
   });
 
   // Auto-redirect all users when auctioneer advances to next lot
@@ -69,20 +71,18 @@ export default function LotDetail() {
       if (error) throw error;
       return data as { id: string; amount: number; placed_at: string; bidder_id: string; users: { full_name: string; screen_name: string | null } | null }[];
     },
+    refetchInterval: 4000,
   });
 
   useEffect(() => {
     const channel = supabase
-      .channel(`lot-${id}`)
+      .channel(`lot-${id}-${Date.now()}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'lots', filter: `id=eq.${id}` }, () => {
         queryClient.invalidateQueries({ queryKey: ['lot', id] });
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bids', filter: `lot_id=eq.${id}` }, () => {
         queryClient.invalidateQueries({ queryKey: ['lot', id, 'bids'] });
         queryClient.invalidateQueries({ queryKey: ['lot', id] });
-      })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'live_sessions' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['live-session'] });
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };

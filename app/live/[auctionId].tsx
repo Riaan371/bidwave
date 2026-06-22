@@ -39,6 +39,7 @@ export default function LiveRoom() {
         .eq('auction_id', auctionId).eq('status', 'live').maybeSingle();
       return data;
     },
+    refetchInterval: 3000,
     onSuccess: (data) => { if (data?.current_lot_index != null) setLotIndex(data.current_lot_index); },
   });
 
@@ -57,6 +58,7 @@ export default function LiveRoom() {
         .order('created_at').limit(1).maybeSingle();
       return data;
     },
+    refetchInterval: 4000,
   });
 
   const totalLots = liveSession?.lot_ids?.length ?? 0;
@@ -76,14 +78,8 @@ export default function LiveRoom() {
 
   useEffect(() => {
     const channel = supabase
-      .channel(`live-room-${auctionId}`)
+      .channel(`live-bids-${auctionId}-${Date.now()}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bids' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['live-lot', auctionId] });
-      })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'live_sessions', filter: `auction_id=eq.${auctionId}` }, () => {
-        queryClient.invalidateQueries({ queryKey: ['live-session-detail', auctionId] });
-      })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'lots' }, () => {
         queryClient.invalidateQueries({ queryKey: ['live-lot', auctionId] });
       })
       .subscribe();
