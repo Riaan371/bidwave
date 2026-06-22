@@ -1,6 +1,7 @@
 import { Redirect, Link } from 'expo-router';
-import { View, Text, Pressable, StyleSheet, Image } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Image, ImageBackground } from 'react-native';
 import { useAuthStore } from '../lib/auth-store';
+import { Colors } from '../lib/theme';
 
 export default function Welcome() {
   const session = useAuthStore((s) => s.session);
@@ -10,27 +11,30 @@ export default function Welcome() {
 
   return (
     <View style={s.root}>
+      {/* Top: logo + branding */}
       <View style={s.top}>
-        <Image source={require('../assets/icon.png')} style={s.logo} resizeMode="cover" />
+        <Image source={require('../assets/logo.png')} style={s.logo} resizeMode="contain" />
         <Text style={s.title}>West Coast Pickers</Text>
-        <Text style={s.sub}>South Africa's premier live{'\n'}auction marketplace 🇿🇦</Text>
+        <Text style={s.tagline}>South Africa's Live Auction Marketplace</Text>
+        <View style={s.divider} />
+        <Text style={s.sub}>Bid live on vehicles, livestock, plant & equipment, collectibles and more — from anywhere in South Africa.</Text>
       </View>
+
+      {/* Bottom: CTAs */}
       <View style={s.btns}>
         <Link href="/(auth)/role" asChild>
-          <Pressable style={[s.btn, { backgroundColor: '#fff' }]}>
-            <Text style={[s.btnTxt, { color: '#0B5FFF' }]}>Get Started</Text>
+          <Pressable style={s.btnPrimary}>
+            <Text style={s.btnPrimaryTxt}>Get Started — Register Free</Text>
           </Pressable>
         </Link>
         <Link href="/(auth)/login" asChild>
-          <Pressable style={[s.btn, { borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.6)' }]}>
-            <Text style={[s.btnTxt, { color: '#fff' }]}>I already have an account</Text>
+          <Pressable style={s.btnSecondary}>
+            <Text style={s.btnSecondaryTxt}>I Already Have an Account</Text>
           </Pressable>
         </Link>
         <Link href="/(tabs)" asChild>
-          <Pressable style={{ marginTop: 20, alignItems: 'center' }}>
-            <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, textDecorationLine: 'underline' }}>
-              Continue as guest
-            </Text>
+          <Pressable style={{ alignItems: 'center', marginTop: 16, paddingBottom: 8 }}>
+            <Text style={s.guestTxt}>Continue as Guest →</Text>
           </Pressable>
         </Link>
       </View>
@@ -39,12 +43,17 @@ export default function Welcome() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0B5FFF', paddingHorizontal: 32 },
+  root: { flex: 1, backgroundColor: Colors.navy, paddingHorizontal: 28 },
   top: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  logo: { width: 100, height: 100, borderRadius: 22, marginBottom: 20 },
-  title: { fontSize: 36, fontWeight: '800', color: '#fff', letterSpacing: -0.5, textAlign: 'center' },
-  sub: { fontSize: 16, color: 'rgba(255,255,255,0.8)', textAlign: 'center', marginTop: 8, lineHeight: 24 },
-  btns: { paddingBottom: 52, gap: 12 },
-  btn: { borderRadius: 16, paddingVertical: 16, alignItems: 'center' },
-  btnTxt: { fontSize: 16, fontWeight: '700' },
+  logo: { width: 120, height: 120, marginBottom: 20 },
+  title: { fontSize: 32, fontWeight: '800', color: '#fff', letterSpacing: 0.2, textAlign: 'center' },
+  tagline: { fontSize: 13, color: Colors.gold, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginTop: 6, textAlign: 'center' },
+  divider: { width: 48, height: 2, backgroundColor: Colors.gold, borderRadius: 2, marginVertical: 20 },
+  sub: { fontSize: 14, color: 'rgba(255,255,255,0.5)', textAlign: 'center', lineHeight: 22, maxWidth: 300 },
+  btns: { paddingBottom: 48, gap: 12 },
+  btnPrimary: { backgroundColor: Colors.gold, borderRadius: 14, paddingVertical: 17, alignItems: 'center' },
+  btnPrimaryTxt: { color: Colors.navy, fontWeight: '800', fontSize: 16 },
+  btnSecondary: { borderRadius: 14, paddingVertical: 16, alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(196,154,34,0.5)' },
+  btnSecondaryTxt: { color: '#fff', fontWeight: '700', fontSize: 15 },
+  guestTxt: { color: 'rgba(255,255,255,0.4)', fontSize: 13 },
 });
