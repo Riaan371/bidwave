@@ -2,6 +2,7 @@ import { View, Text, FlatList, Image, Pressable, RefreshControl, ScrollView, Sty
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
+import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../lib/auth-store';
 import { useAppTheme, Colors } from '../../lib/theme';
@@ -10,16 +11,16 @@ import { ListSkeleton } from '../../components/Skeleton';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const CATEGORIES = [
-  { name: 'Vehicles', emoji: '🚗', color: '#1E40AF' },
-  { name: 'Plant & Equipment', emoji: '🏗️', color: '#92400E' },
-  { name: 'Livestock', emoji: '🐄', color: '#065F46' },
-  { name: 'Property', emoji: '🏠', color: '#7C3AED' },
-  { name: 'Industrial', emoji: '🏭', color: '#374151' },
-  { name: 'Household', emoji: '🛋️', color: '#B45309' },
-  { name: 'Electronics', emoji: '💻', color: '#0369A1' },
-  { name: 'Collectibles', emoji: '💎', color: '#BE185D' },
-  { name: 'Art & Jewellery', emoji: '🎨', color: '#9D174D' },
+const CATEGORIES: { name: string; icon: React.ReactNode; color: string }[] = [
+  { name: 'Vehicles',          icon: <MaterialIcons name="directions-car" size={26} color="#fff" />,        color: '#1E40AF' },
+  { name: 'Plant & Equipment', icon: <MaterialIcons name="construction" size={26} color="#fff" />,          color: '#92400E' },
+  { name: 'Livestock',         icon: <MaterialCommunityIcons name="cow" size={26} color="#fff" />,          color: '#065F46' },
+  { name: 'Property',          icon: <MaterialIcons name="home-work" size={26} color="#fff" />,             color: '#7C3AED' },
+  { name: 'Industrial',        icon: <MaterialIcons name="precision-manufacturing" size={26} color="#fff" />, color: '#374151' },
+  { name: 'Household',         icon: <MaterialIcons name="weekend" size={26} color="#fff" />,               color: '#B45309' },
+  { name: 'Electronics',       icon: <MaterialIcons name="devices" size={26} color="#fff" />,               color: '#0369A1' },
+  { name: 'Collectibles',      icon: <MaterialIcons name="diamond" size={26} color="#fff" />,               color: '#BE185D' },
+  { name: 'Art & Jewellery',   icon: <MaterialIcons name="palette" size={26} color="#fff" />,               color: '#9D174D' },
 ];
 
 // Placeholder auction images per category
@@ -45,8 +46,8 @@ type LotWithAuction = {
 async function fetchLots(): Promise<LotWithAuction[]> {
   const { data, error } = await supabase
     .from('lots').select('id, title, photos, starting_bid, current_bid, category, created_at, auctions(end_at)')
-    .eq('closed', false)
-    .order('created_at', { ascending: false }).limit(30);
+    .neq('closed', true)
+    .order('created_at', { ascending: false }).limit(50);
   if (error) throw error;
   return data as unknown as LotWithAuction[];
 }
@@ -138,7 +139,7 @@ export default function Home() {
             {/* Hero */}
             <View style={s.hero}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <Image source={require('../../assets/icon.png')} style={s.heroLogo} resizeMode="cover" />
+                <Image source={require('../../assets/logo.png')} style={s.heroLogo} resizeMode="contain" />
                 <View style={{ flex: 1 }}>
                   <Text style={s.heroTitle}>West Coast Pickers</Text>
                   <Text style={s.heroSub}>South Africa's Live Auction Marketplace 🇿🇦</Text>
@@ -192,7 +193,7 @@ export default function Home() {
                     onPress={() => router.push({ pathname: '/(tabs)/search', params: { category: cat.name } })}
                     style={[s.catChip, { backgroundColor: cat.color }]}
                   >
-                    <Text style={{ fontSize: 20, marginBottom: 2 }}>{cat.emoji}</Text>
+                    {cat.icon}
                     <Text style={s.catChipName}>{cat.name}</Text>
                   </Pressable>
                 ))}
@@ -200,7 +201,7 @@ export default function Home() {
             </View>
 
             {/* All Lots heading */}
-            <View style={s.sectionHeader}>
+            <View style={[s.sectionHeader, { paddingHorizontal: 16 }]}>
               <Text style={[s.sectionTitle, { color: ink }]}>All Lots</Text>
             </View>
             {isLoading && <ListSkeleton />}
@@ -218,9 +219,7 @@ export default function Home() {
           ) : null
         }
         renderItem={({ item, index }) => (
-          <View style={{ paddingHorizontal: 16 }}>
-            <LotCard lot={{ ...item, end_at: item.auctions?.end_at }} index={index} isWatched={watchedIds?.has(item.id)} />
-          </View>
+          <LotCard lot={{ ...item, end_at: item.auctions?.end_at }} index={index} isWatched={watchedIds?.has(item.id)} />
         )}
       />
     </SafeAreaView>

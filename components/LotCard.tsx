@@ -1,6 +1,7 @@
 import { View, Text, Image, Pressable, StyleSheet, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { MaterialIcons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../lib/auth-store';
 import { useAppTheme, Colors } from '../lib/theme';
@@ -47,25 +48,21 @@ export default function LotCard({ lot, index = 0, isWatched }: { lot: LotCardDat
 
   return (
     <View entering={entering}>
-      <Pressable onPress={() => router.push(`/lot/${lot.id}`)} style={[s.card, { backgroundColor: card, borderColor: border }]}>
-        <View>
-          <Image source={{ uri: lot.photos?.[0] }} style={s.img} resizeMode="cover" />
-          {lot.category && (
-            <View style={s.badge}>
-              <Text style={s.badgeTxt}>{lot.category}</Text>
-            </View>
-          )}
-        </View>
+      <Pressable onPress={() => router.push(`/lot/${lot.id}`)} style={[s.card, { backgroundColor: card, borderBottomColor: border }]}>
+        <Image source={{ uri: lot.photos?.[0] }} style={s.img} resizeMode="cover" />
         <View style={s.info}>
-          <View style={s.row}>
-            <Text style={[s.title, { color: ink }]} numberOfLines={1}>{lot.title}</Text>
-            <Pressable onPress={() => toggleWatch.mutate()} hitSlop={10}>
-              <Text style={{ fontSize: 20 }}>{isWatched ? '❤️' : '🤍'}</Text>
+          {lot.category && <Text style={[s.category, { color: muted }]}>{lot.category.toUpperCase()}</Text>}
+          <Text style={[s.title, { color: ink }]} numberOfLines={2}>{lot.title}</Text>
+          <View style={s.bottomRow}>
+            <View>
+              <Text style={[s.bidLabel, { color: muted }]}>Current bid</Text>
+              <Text style={s.bidAmt}>{formatZAR(lot.current_bid ?? lot.starting_bid)}</Text>
+              {lot.end_at && <CountdownTimer endAt={lot.end_at} />}
+            </View>
+            <Pressable onPress={() => toggleWatch.mutate()} hitSlop={12} style={s.heartBtn}>
+              <MaterialIcons name={isWatched ? 'favorite' : 'favorite-border'} size={22} color={isWatched ? '#ef4444' : muted} />
             </Pressable>
           </View>
-          <Text style={[s.bidLabel, { color: muted }]}>Current bid</Text>
-          <Text style={s.bidAmt}>{formatZAR(lot.current_bid ?? lot.starting_bid)}</Text>
-          {lot.end_at && <CountdownTimer endAt={lot.end_at} />}
         </View>
       </Pressable>
     </View>
@@ -73,13 +70,13 @@ export default function LotCard({ lot, index = 0, isWatched }: { lot: LotCardDat
 }
 
 const s = StyleSheet.create({
-  card: { flexDirection: 'row', borderWidth: 1, borderRadius: 16, marginBottom: 12, overflow: 'hidden' },
-  img: { width: 112, height: 112 },
-  badge: { position: 'absolute', top: 8, left: 8, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 99, paddingHorizontal: 8, paddingVertical: 3 },
-  badgeTxt: { color: '#fff', fontSize: 10, fontWeight: '700' },
-  info: { flex: 1, padding: 12, justifyContent: 'center' },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 2 },
-  title: { fontSize: 15, fontWeight: '600', flex: 1, marginRight: 8 },
-  bidLabel: { fontSize: 11, marginBottom: 2 },
-  bidAmt: { fontSize: 18, fontWeight: '800', color: Colors.primary },
+  card: { flexDirection: 'row', borderBottomWidth: 1, overflow: 'hidden' },
+  img: { width: 100, height: 100 },
+  info: { flex: 1, paddingHorizontal: 14, paddingVertical: 10, justifyContent: 'space-between' },
+  category: { fontSize: 10, fontWeight: '700', letterSpacing: 0.8, marginBottom: 2 },
+  title: { fontSize: 14, fontWeight: '600', lineHeight: 20, flex: 1 },
+  bottomRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 6 },
+  bidLabel: { fontSize: 10, marginBottom: 1 },
+  bidAmt: { fontSize: 17, fontWeight: '800', color: Colors.primary },
+  heartBtn: { padding: 4 },
 });
