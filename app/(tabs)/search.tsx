@@ -9,7 +9,7 @@ import { useAppTheme, Colors } from '../../lib/theme';
 import LotCard from '../../components/LotCard';
 import { ListSkeleton } from '../../components/Skeleton';
 
-const CATEGORIES = ['Vehicles', 'Livestock', 'Property', 'Electronics', 'Collectibles', 'Art'];
+const CATEGORIES = ['Vehicles', 'Plant & Equipment', 'Livestock', 'Property', 'Industrial', 'Household', 'Electronics', 'Collectibles', 'Art & Jewellery'];
 
 export default function Search() {
   const params = useLocalSearchParams<{ category?: string }>();

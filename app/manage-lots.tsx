@@ -10,7 +10,7 @@ import { useAuthStore } from '../lib/auth-store';
 import { useAppTheme, Colors } from '../lib/theme';
 import { formatZAR } from '../components/LotCard';
 
-const CATEGORIES = ['Vehicles', 'Livestock', 'Property', 'Electronics', 'Collectibles', 'Art'];
+const CATEGORIES = ['Vehicles', 'Plant & Equipment', 'Livestock', 'Property', 'Industrial', 'Household', 'Electronics', 'Collectibles', 'Art & Jewellery'];
 
 export default function ManageLots() {
   const session = useAuthStore((s) => s.session);
