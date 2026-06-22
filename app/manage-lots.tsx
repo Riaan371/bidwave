@@ -48,9 +48,10 @@ export default function ManageLots() {
   const { data: lots, isLoading } = useQuery({
     queryKey: ['auctioneer-lots', session?.user.id],
     queryFn: async () => {
+      // Fetch ALL lots in the inventory pool (no auction assigned yet, or any auction)
       const { data, error } = await supabase
         .from('lots').select('id, title, photos, starting_bid, current_bid, category, winner_id')
-        .eq('auction_id', '00000000-0000-0000-0000-0000000000a1')
+        .is('auction_id', null)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data ?? [];
@@ -86,7 +87,6 @@ export default function ManageLots() {
       }
 
       const { data, error } = await supabase.from('lots').insert({
-        auction_id: '00000000-0000-0000-0000-0000000000a1',
         title: title.trim(), description: description.trim() || null,
         photos: photoUrls, category,
         starting_bid: Number(startingBid),
