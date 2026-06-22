@@ -156,7 +156,11 @@ export default function Home() {
   const [showInstall, setShowInstall] = useState(false);
   const [showIOSGuide, setShowIOSGuide] = useState(false);
   const isIOS = typeof navigator !== 'undefined' && /iphone|ipad|ipod/i.test(navigator.userAgent);
-  const isInStandalone = typeof window !== 'undefined' && (window.navigator as any).standalone === true;
+  // Detect if already running as installed PWA (works on both iOS and Android/Chrome)
+  const isInStandalone = typeof window !== 'undefined' && (
+    (window.navigator as any).standalone === true ||
+    window.matchMedia('(display-mode: standalone)').matches
+  );
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
