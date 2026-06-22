@@ -34,29 +34,65 @@ async function fetchLotCovers(auctionIds: string[]) {
   if (!auctionIds.length) return {};
   const { data } = await supabase
     .from('lots')
-    .select('auction_id, photos')
+    .select('auction_id, photos, title')
     .in('auction_id', auctionIds)
     .neq('photos', '{}')
-    .limit(30);
-  const map: Record<string, string> = {};
+    .limit(60);
+  // Collect up to 4 photos per auction for the collage
+  const map: Record<string, string[]> = {};
   for (const l of data ?? []) {
-    if (!map[l.auction_id] && l.photos?.[0]) map[l.auction_id] = l.photos[0];
+    if (!l.photos?.[0]) continue;
+    if (!map[l.auction_id]) map[l.auction_id] = [];
+    if (map[l.auction_id].length < 4) map[l.auction_id].push(l.photos[0]);
   }
   return map;
 }
 
-function AuctionEventCard({ session, cover }: { session: any; cover?: string }) {
+const FALLBACK = 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=600&q=80';
+
+function PhotoCollage({ photos }: { photos: string[] }) {
+  const p = photos.length;
+  if (p === 0) return <Image source={{ uri: FALLBACK }} style={s.eventImg} resizeMode="cover" />;
+  if (p === 1) return <Image source={{ uri: photos[0] }} style={s.eventImg} resizeMode="cover" />;
+  if (p === 2) return (
+    <View style={s.collageRow}>
+      <Image source={{ uri: photos[0] }} style={s.collageHalf} resizeMode="cover" />
+      <View style={s.collageDivider} />
+      <Image source={{ uri: photos[1] }} style={s.collageHalf} resizeMode="cover" />
+    </View>
+  );
+  // 3 or 4 photos: big left + stacked right
+  return (
+    <View style={s.collageRow}>
+      <Image source={{ uri: photos[0] }} style={s.collageBig} resizeMode="cover" />
+      <View style={s.collageDivider} />
+      <View style={{ flex: 1 }}>
+        <Image source={{ uri: photos[1] }} style={s.collageSmall} resizeMode="cover" />
+        <View style={s.collageDividerH} />
+        <Image source={{ uri: photos[2] ?? photos[1] }} style={s.collageSmall} resizeMode="cover" />
+        {p >= 4 && (
+          <>
+            <View style={s.collageDividerH} />
+            <Image source={{ uri: photos[3] }} style={s.collageSmall} resizeMode="cover" />
+          </>
+        )}
+      </View>
+    </View>
+  );
+}
+
+function AuctionEventCard({ session, photos }: { session: any; photos?: string[] }) {
   const isLive = session.status === 'live';
   const dt = session.scheduled_at ? new Date(session.scheduled_at) : null;
   const dateStr = dt ? dt.toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
   const timeStr = dt ? dt.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' }) : '';
   const lotCount = session.lot_ids?.length ?? 0;
   const title = session.title ?? session.auctions?.title ?? 'Auction Event';
-  const img = cover ?? 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=600&q=80';
 
   return (
     <Pressable style={s.eventCard} onPress={() => router.push(`/live/${session.auction_id}`)}>
-      <Image source={{ uri: img }} style={s.eventImg} resizeMode="cover" />
+      {/* Photo collage from actual lot images */}
+      <PhotoCollage photos={photos ?? []} />
       <View style={s.eventImgOverlay} />
       {isLive && (
         <View style={s.liveBadge}>
@@ -65,13 +101,11 @@ function AuctionEventCard({ session, cover }: { session: any; cover?: string }) 
         </View>
       )}
       <View style={s.eventContent}>
-        {dt && !isLive && (
-          <Text style={s.eventDate}>{dateStr.toUpperCase()}</Text>
-        )}
+        {dt && !isLive && <Text style={s.eventDate}>{dateStr.toUpperCase()}</Text>}
         <Text style={s.eventTitle} numberOfLines={2}>{title}</Text>
         <View style={s.eventMeta}>
           {timeStr && !isLive && <Text style={s.eventMetaTxt}>🕙 {timeStr}</Text>}
-          {lotCount > 0 && <Text style={s.eventMetaTxt}>{lotCount} lot{lotCount !== 1 ? 's' : ''}</Text>}
+          {lotCount > 0 && <Text style={s.eventMetaTxt}>🔨 {lotCount} lot{lotCount !== 1 ? 's' : ''}</Text>}
         </View>
         <View style={s.eventBtn}>
           <Text style={s.eventBtnTxt}>View Auction →</Text>
@@ -97,7 +131,7 @@ export default function Home() {
     queryKey: ['lot-covers', auctionIds.join(',')],
     queryFn: () => fetchLotCovers(auctionIds),
     enabled: auctionIds.length > 0,
-  });
+  }); // covers: Record<auctionId, string[]>
 
   const liveEvents = (events ?? []).filter((e: any) => e.status === 'live');
   const upcomingEvents = (events ?? []).filter((e: any) => e.status === 'scheduled');
@@ -156,7 +190,7 @@ export default function Home() {
               keyExtractor={(item: any) => item.auction_id}
               contentContainerStyle={{ paddingHorizontal: 16, gap: 14 }}
               renderItem={({ item }: any) => (
-                <AuctionEventCard session={item} cover={covers?.[item.auction_id]} />
+                <AuctionEventCard session={item} photos={covers?.[item.auction_id]} />
               )}
             />
           </View>
@@ -227,6 +261,13 @@ const s = StyleSheet.create({
   eventCard: { width: CARD_W, borderRadius: 16, overflow: 'hidden', backgroundColor: Colors.navy },
   eventImg: { width: '100%', height: 180 },
   eventImgOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(13,27,46,0.45)', top: 0, height: 180 },
+  // Collage layouts
+  collageRow: { flexDirection: 'row', height: 180 },
+  collageDivider: { width: 2, backgroundColor: Colors.navy },
+  collageDividerH: { height: 2, backgroundColor: Colors.navy },
+  collageHalf: { flex: 1, height: 180 },
+  collageBig: { flex: 1.4, height: 180 },
+  collageSmall: { flex: 1 },
   liveBadge: { position: 'absolute', top: 12, left: 12, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#DC2626', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
   liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#fff' },
   liveBadgeTxt: { color: '#fff', fontWeight: '800', fontSize: 11, letterSpacing: 0.5 },
