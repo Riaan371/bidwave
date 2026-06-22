@@ -49,10 +49,11 @@ export default function ManageLots() {
   const { data: lots, isLoading } = useQuery({
     queryKey: ['auctioneer-lots', session?.user.id],
     queryFn: async () => {
-      // Fetch ALL lots in the inventory pool (no auction assigned yet, or any auction)
+      // Fetch ALL lots belonging to this auctioneer — inventory + published
       const { data, error } = await supabase
-        .from('lots').select('id, title, photos, starting_bid, current_bid, category, winner_id')
-        .is('auction_id', null)
+        .from('lots')
+        .select('id, title, photos, starting_bid, current_bid, category, winner_id, auction_id, auctions(title, status)')
+        .eq('auctioneer_id', session!.user.id)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data ?? [];
@@ -474,37 +475,89 @@ export default function ManageLots() {
           </View>
         )}
 
-        {(lots ?? []).map((lot) => {
-          const isSelected = selected.has(lot.id);
-          const RowEl = pickMode ? Pressable : View;
+        {/* Group lots: Inventory (no auction) vs In Auction */}
+        {!pickMode && (() => {
+          const inventory = (lots ?? []).filter((l: any) => !l.auction_id);
+          const inAuction = (lots ?? []).filter((l: any) => !!l.auction_id);
+          const auctionGroups: Record<string, { auctionTitle: string; auctionStatus: string; lots: any[] }> = {};
+          for (const lot of inAuction) {
+            const aid = lot.auction_id;
+            if (!auctionGroups[aid]) auctionGroups[aid] = { auctionTitle: (lot as any).auctions?.title ?? 'Auction', auctionStatus: (lot as any).auctions?.status ?? '', lots: [] };
+            auctionGroups[aid].lots.push(lot);
+          }
           return (
-            <RowEl key={lot.id} {...(pickMode ? { onPress: () => toggleSelect(lot.id) } : {})}
+            <>
+              {Object.entries(auctionGroups).map(([aid, group]) => (
+                <View key={aid}>
+                  <View style={[s.groupHeader, { borderColor: border }]}>
+                    <Text style={[s.groupTitle, { color: Colors.gold }]}>📦 {group.auctionTitle}</Text>
+                    <View style={[s.statusBadge, { backgroundColor: group.auctionStatus === 'active' ? '#16A34A' : group.auctionStatus === 'closed' ? '#6B7280' : Colors.navy }]}>
+                      <Text style={s.statusBadgeTxt}>{group.auctionStatus?.toUpperCase()}</Text>
+                    </View>
+                  </View>
+                  {group.lots.map((lot: any) => (
+                    <View key={lot.id} style={[s.lotRow, { backgroundColor: card, borderColor: border }]}>
+                      <Image source={{ uri: lot.photos?.[0] || 'https://picsum.photos/80/80' }} style={s.lotThumb} />
+                      <View style={{ flex: 1, marginLeft: 12 }}>
+                        <Text style={[s.lotTitle, { color: ink }]} numberOfLines={1}>{lot.title}</Text>
+                        <Text style={{ color: muted, fontSize: 12 }}>{lot.category}</Text>
+                        <Text style={{ color: Colors.primary, fontWeight: '700', fontSize: 14, marginTop: 2 }}>{formatZAR(lot.current_bid ?? lot.starting_bid)}</Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', gap: 8, marginLeft: 8 }}>
+                        <TouchableOpacity onPress={() => openEdit(lot)} style={s.iconBtn} activeOpacity={0.6}>
+                          <Text style={{ fontSize: 18 }}>✏️</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              ))}
+              {inventory.length > 0 && (
+                <View style={[s.groupHeader, { borderColor: border }]}>
+                  <Text style={[s.groupTitle, { color: ink }]}>🗃 Inventory (not yet published)</Text>
+                </View>
+              )}
+              {inventory.map((lot: any) => (
+                <View key={lot.id} style={[s.lotRow, { backgroundColor: card, borderColor: border }]}>
+                  <Image source={{ uri: lot.photos?.[0] || 'https://picsum.photos/80/80' }} style={s.lotThumb} />
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={[s.lotTitle, { color: ink }]} numberOfLines={1}>{lot.title}</Text>
+                    <Text style={{ color: muted, fontSize: 12 }}>{lot.category}</Text>
+                    <Text style={{ color: Colors.primary, fontWeight: '700', fontSize: 14, marginTop: 2 }}>{formatZAR(lot.current_bid ?? lot.starting_bid)}</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', gap: 8, marginLeft: 8 }}>
+                    <TouchableOpacity onPress={() => openEdit(lot)} style={s.iconBtn} activeOpacity={0.6}>
+                      <Text style={{ fontSize: 18 }}>✏️</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => deleteLot.mutate(lot.id)} style={[s.iconBtn, s.iconBtnRed]} activeOpacity={0.6}>
+                      <Text style={{ fontSize: 18 }}>🗑</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </>
+          );
+        })()}
+
+        {/* Pick mode lot list */}
+        {pickMode && (lots ?? []).filter((l: any) => !l.auction_id).map((lot: any) => {
+          const isSelected = selected.has(lot.id);
+          return (
+            <Pressable key={lot.id} onPress={() => toggleSelect(lot.id)}
               style={[s.lotRow, { backgroundColor: card, borderColor: isSelected ? Colors.primary : border }]}>
               <Image source={{ uri: lot.photos?.[0] || 'https://picsum.photos/80/80' }} style={s.lotThumb} />
               <View style={{ flex: 1, marginLeft: 12 }}>
                 <Text style={[s.lotTitle, { color: ink }]} numberOfLines={1}>{lot.title}</Text>
                 <Text style={{ color: muted, fontSize: 12 }}>{lot.category}</Text>
-                <Text style={{ color: Colors.primary, fontWeight: '700', fontSize: 14, marginTop: 2 }}>
-                  {formatZAR(lot.current_bid ?? lot.starting_bid)}
-                </Text>
+                <Text style={{ color: Colors.primary, fontWeight: '700', fontSize: 14, marginTop: 2 }}>{formatZAR(lot.current_bid ?? lot.starting_bid)}</Text>
               </View>
-              {pickMode ? (
-                <View style={[s.checkbox, { borderColor: isSelected ? Colors.primary : border, backgroundColor: isSelected ? Colors.primary : 'transparent' }]}>
-                  {isSelected && <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>✓</Text>}
-                </View>
-              ) : (
-                <View style={{ flexDirection: 'row', gap: 8, marginLeft: 8 }}>
-                  <TouchableOpacity onPress={() => openEdit(lot)} style={s.iconBtn} activeOpacity={0.6}>
-                    <Text style={{ fontSize: 18 }}>✏️</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => deleteLot.mutate(lot.id)} style={[s.iconBtn, s.iconBtnRed]} activeOpacity={0.6}>
-                    <Text style={{ fontSize: 18 }}>🗑️</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </RowEl>
+              <View style={[s.checkbox, { borderColor: isSelected ? Colors.primary : border, backgroundColor: isSelected ? Colors.primary : 'transparent' }]}>
+                {isSelected && <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>✓</Text>}
+              </View>
+            </Pressable>
           );
         })}
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -518,6 +571,10 @@ const s = StyleSheet.create({
   createToggle: { borderWidth: 1.5, borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginBottom: 16 },
   createForm: { borderWidth: 1, borderRadius: 16, padding: 16, marginBottom: 20 },
   sectionTitle: { fontSize: 15, fontWeight: '700', marginBottom: 12 },
+  groupHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, paddingBottom: 6, marginBottom: 8, marginTop: 12 },
+  groupTitle: { fontSize: 13, fontWeight: '700' },
+  statusBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 },
+  statusBadgeTxt: { color: '#fff', fontSize: 10, fontWeight: '700' },
   lotRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderRadius: 14, padding: 10, marginBottom: 10 },
   lotThumb: { width: 60, height: 60, borderRadius: 10 },
   iconBtn: { width: 38, height: 38, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F3F4F6' },

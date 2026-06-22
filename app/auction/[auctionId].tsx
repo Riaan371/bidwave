@@ -51,6 +51,7 @@ export default function AuctionDetail() {
   });
 
   const isTimed = auction?.type === 'timed';
+  const isClosed = auction?.status === 'closed' || auction?.status === 'cancelled';
   const isLoading = loadingAuction || loadingLots;
 
   return (
@@ -94,6 +95,13 @@ export default function AuctionDetail() {
             )}
           </View>
 
+          {/* Closed auction banner */}
+          {isClosed && (
+            <View style={s.closedBanner}>
+              <Text style={s.closedBannerTxt}>🔒 This auction has ended. Items are archived.</Text>
+            </View>
+          )}
+
           {/* Lot count */}
           <Text style={[s.lotCount, { color: muted }]}>
             {lots?.length ?? 0} lot{lots?.length !== 1 ? 's' : ''} in this auction
@@ -109,7 +117,7 @@ export default function AuctionDetail() {
               <Pressable
                 key={lot.id}
                 style={[s.lotCard, { backgroundColor: card, borderColor: border }]}
-                onPress={() => isTimed && !closed ? router.push(`/lot/${lot.id}`) : undefined}
+                onPress={() => isTimed && !closed && !isClosed ? router.push(`/lot/${lot.id}`) : undefined}
               >
                 <Image
                   source={{ uri: photo || 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=400' }}
@@ -169,5 +177,7 @@ const s = StyleSheet.create({
   bidBtnTxt: { color: Colors.navy, fontWeight: '800', fontSize: 12 },
   closedBadge: { backgroundColor: '#6B7280', borderRadius: 8, paddingVertical: 7, alignItems: 'center' },
   closedTxt: { color: '#fff', fontWeight: '700', fontSize: 12 },
+  closedBanner: { backgroundColor: '#374151', borderRadius: 12, padding: 14, marginBottom: 12, alignItems: 'center' },
+  closedBannerTxt: { color: '#D1D5DB', fontWeight: '600', fontSize: 13 },
   emptyTxt: { textAlign: 'center', marginTop: 40, fontSize: 15 },
 });
