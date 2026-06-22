@@ -1,4 +1,4 @@
-import { View, Text, Image, ScrollView, Pressable, ActivityIndicator, Alert, StyleSheet, TextInput, Dimensions } from 'react-native';
+import { View, Text, Image, ScrollView, Pressable, ActivityIndicator, Alert, StyleSheet, TextInput, Dimensions, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -22,6 +22,8 @@ export default function LotDetail() {
 
   const [customBid, setCustomBid] = useState<number | null>(null);
   const [photoIndex, setPhotoIndex] = useState(0);
+  const [lightbox, setLightbox] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
   const screenWidth = Dimensions.get('window').width;
 
   const { data: lot, isLoading } = useQuery({
@@ -193,33 +195,62 @@ export default function LotDetail() {
         {/* Image carousel */}
         {lot.photos && lot.photos.length > 0 ? (
           <View>
-            <ScrollView
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              onScroll={(e) => {
-                const idx = Math.round(e.nativeEvent.contentOffset.x / screenWidth);
-                setPhotoIndex(idx);
-              }}
-              scrollEventThrottle={16}
-            >
-              {lot.photos.map((uri: string, i: number) => (
-                <Image key={i} source={{ uri }} style={[s.heroImg, { width: screenWidth }]} resizeMode="cover" />
-              ))}
-            </ScrollView>
+            <Pressable onPress={() => { setLightboxIndex(photoIndex); setLightbox(true); }}>
+              <Image source={{ uri: lot.photos[photoIndex] }} style={[s.heroImg, { width: screenWidth }]} resizeMode="cover" />
+              <View style={s.zoomHint}><Text style={s.zoomHintTxt}>🔍 Tap to enlarge</Text></View>
+            </Pressable>
             {lot.photos.length > 1 && (
-              <View style={s.dotRow}>
-                {lot.photos.map((_: string, i: number) => (
-                  <View key={i} style={[s.dot, i === photoIndex && s.dotActive]} />
-                ))}
+              <View style={s.carouselNav}>
+                <Pressable onPress={() => setPhotoIndex((i) => (i - 1 + lot.photos.length) % lot.photos.length)} style={s.arrowBtn}>
+                  <Text style={s.arrowTxt}>‹</Text>
+                </Pressable>
+                <View style={s.dotRow}>
+                  {lot.photos.map((_: string, i: number) => (
+                    <Pressable key={i} onPress={() => setPhotoIndex(i)}>
+                      <View style={[s.dot, i === photoIndex && s.dotActive]} />
+                    </Pressable>
+                  ))}
+                </View>
+                <Pressable onPress={() => setPhotoIndex((i) => (i + 1) % lot.photos.length)} style={s.arrowBtn}>
+                  <Text style={s.arrowTxt}>›</Text>
+                </Pressable>
               </View>
             )}
+            <Text style={s.photoCount}>{photoIndex + 1} / {lot.photos.length}</Text>
           </View>
         ) : (
           <View style={[s.heroImg, { backgroundColor: '#e5e7eb', alignItems: 'center', justifyContent: 'center' }]}>
             <Text style={{ color: '#9ca3af', fontSize: 40 }}>📷</Text>
           </View>
         )}
+
+        {/* Fullscreen lightbox */}
+        <Modal visible={lightbox} transparent animationType="fade" onRequestClose={() => setLightbox(false)}>
+          <View style={s.lightboxBg}>
+            <Pressable style={s.lightboxClose} onPress={() => setLightbox(false)}>
+              <Text style={s.lightboxCloseTxt}>✕</Text>
+            </Pressable>
+            <Image source={{ uri: lot.photos?.[lightboxIndex] }} style={s.lightboxImg} resizeMode="contain" />
+            {lot.photos && lot.photos.length > 1 && (
+              <View style={s.lightboxNav}>
+                <Pressable onPress={() => setLightboxIndex((i) => (i - 1 + lot.photos.length) % lot.photos.length)} style={s.lightboxArrow}>
+                  <Text style={s.lightboxArrowTxt}>‹</Text>
+                </Pressable>
+                <Text style={{ color: '#fff', fontSize: 14 }}>{lightboxIndex + 1} / {lot.photos.length}</Text>
+                <Pressable onPress={() => setLightboxIndex((i) => (i + 1) % lot.photos.length)} style={s.lightboxArrow}>
+                  <Text style={s.lightboxArrowTxt}>›</Text>
+                </Pressable>
+              </View>
+            )}
+            <View style={s.lightboxThumbRow}>
+              {lot.photos.map((uri: string, i: number) => (
+                <Pressable key={i} onPress={() => setLightboxIndex(i)}>
+                  <Image source={{ uri }} style={[s.lightboxThumb, i === lightboxIndex && s.lightboxThumbActive]} resizeMode="cover" />
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        </Modal>
 
         {liveSession && (
           <Pressable onPress={() => router.push(`/live/${liveSession.auction_id}`)} style={s.liveBanner}>
@@ -407,10 +438,27 @@ export default function LotDetail() {
 
 const s = StyleSheet.create({
   root: { flex: 1 },
-  heroImg: { width: '100%', height: 280 },
-  dotRow: { flexDirection: 'row', justifyContent: 'center', gap: 6, paddingVertical: 8 },
+  heroImg: { width: '100%', height: 300 },
+  zoomHint: { position: 'absolute', bottom: 10, right: 10, backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
+  zoomHintTxt: { color: '#fff', fontSize: 11 },
+  carouselNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 6 },
+  arrowBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.navy, alignItems: 'center', justifyContent: 'center' },
+  arrowTxt: { color: '#fff', fontSize: 22, fontWeight: '700', lineHeight: 26 },
+  dotRow: { flexDirection: 'row', justifyContent: 'center', gap: 6, paddingVertical: 4 },
   dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#d1d5db' },
   dotActive: { backgroundColor: Colors.primary, width: 18 },
+  photoCount: { textAlign: 'center', fontSize: 12, color: '#9CA3AF', marginBottom: 4 },
+  // Lightbox
+  lightboxBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'center', alignItems: 'center' },
+  lightboxClose: { position: 'absolute', top: 48, right: 20, zIndex: 10, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 20, width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  lightboxCloseTxt: { color: '#fff', fontSize: 18, fontWeight: '700' },
+  lightboxImg: { width: '100%', height: '65%' },
+  lightboxNav: { flexDirection: 'row', alignItems: 'center', gap: 24, marginTop: 16 },
+  lightboxArrow: { width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
+  lightboxArrowTxt: { color: '#fff', fontSize: 28, fontWeight: '700' },
+  lightboxThumbRow: { flexDirection: 'row', gap: 8, marginTop: 16, paddingHorizontal: 16 },
+  lightboxThumb: { width: 60, height: 60, borderRadius: 8, opacity: 0.6 },
+  lightboxThumbActive: { opacity: 1, borderWidth: 2, borderColor: Colors.gold },
   title: { fontSize: 24, fontWeight: '800', marginBottom: 6 },
   desc: { fontSize: 15, lineHeight: 22 },
   bidRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 16, borderTopWidth: 1, paddingTop: 16 },
