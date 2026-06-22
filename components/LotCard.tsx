@@ -1,7 +1,6 @@
 import { View, Text, Image, Pressable, StyleSheet, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../lib/auth-store';
 import { useAppTheme, Colors } from '../lib/theme';
@@ -60,7 +59,7 @@ export default function LotCard({ lot, index = 0, isWatched }: { lot: LotCardDat
               {lot.end_at && <CountdownTimer endAt={lot.end_at} />}
             </View>
             <Pressable onPress={() => toggleWatch.mutate()} hitSlop={12} style={s.heartBtn}>
-              <MaterialIcons name={isWatched ? 'favorite' : 'favorite-border'} size={22} color={isWatched ? '#ef4444' : muted} />
+              <Text style={{ fontSize: 20, color: isWatched ? '#ef4444' : muted }}>{isWatched ? '♥' : '♡'}</Text>
             </Pressable>
           </View>
         </View>

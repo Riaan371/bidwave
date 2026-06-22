@@ -2,8 +2,6 @@ import { View, Text, FlatList, Image, Pressable, RefreshControl, ScrollView, Sty
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../lib/auth-store';
 import { useAppTheme, Colors } from '../../lib/theme';
@@ -12,16 +10,16 @@ import { ListSkeleton } from '../../components/Skeleton';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const CATEGORIES: { name: string; icon: React.ReactNode; color: string }[] = [
-  { name: 'Vehicles',          icon: <MaterialIcons name="directions-car" size={26} color="#fff" />,        color: '#1E40AF' },
-  { name: 'Plant & Equipment', icon: <MaterialIcons name="construction" size={26} color="#fff" />,          color: '#92400E' },
-  { name: 'Livestock',         icon: <MaterialCommunityIcons name="cow" size={26} color="#fff" />,          color: '#065F46' },
-  { name: 'Property',          icon: <MaterialIcons name="home-work" size={26} color="#fff" />,             color: '#7C3AED' },
-  { name: 'Industrial',        icon: <MaterialIcons name="precision-manufacturing" size={26} color="#fff" />, color: '#374151' },
-  { name: 'Household',         icon: <MaterialIcons name="weekend" size={26} color="#fff" />,               color: '#B45309' },
-  { name: 'Electronics',       icon: <MaterialIcons name="devices" size={26} color="#fff" />,               color: '#0369A1' },
-  { name: 'Collectibles',      icon: <MaterialIcons name="diamond" size={26} color="#fff" />,               color: '#BE185D' },
-  { name: 'Art & Jewellery',   icon: <MaterialIcons name="palette" size={26} color="#fff" />,               color: '#9D174D' },
+const CATEGORIES = [
+  { name: 'Vehicles',          abbr: 'CAR',  color: '#1E40AF' },
+  { name: 'Plant & Equipment', abbr: 'PLANT', color: '#92400E' },
+  { name: 'Livestock',         abbr: 'LIVE',  color: '#065F46' },
+  { name: 'Property',          abbr: 'PROP',  color: '#7C3AED' },
+  { name: 'Industrial',        abbr: 'IND',   color: '#374151' },
+  { name: 'Household',         abbr: 'HOME',  color: '#B45309' },
+  { name: 'Electronics',       abbr: 'ELEC',  color: '#0369A1' },
+  { name: 'Collectibles',      abbr: 'COLL',  color: '#BE185D' },
+  { name: 'Art & Jewellery',   abbr: 'ART',   color: '#9D174D' },
 ];
 
 // Placeholder auction images per category
@@ -194,7 +192,7 @@ export default function Home() {
                     onPress={() => router.push({ pathname: '/(tabs)/search', params: { category: cat.name } })}
                     style={[s.catChip, { backgroundColor: cat.color }]}
                   >
-                    {cat.icon}
+                    <Text style={s.catChipAbbr}>{cat.abbr}</Text>
                     <Text style={s.catChipName}>{cat.name}</Text>
                   </Pressable>
                 ))}
@@ -262,5 +260,6 @@ const s = StyleSheet.create({
 
   // Category chips (horizontal scroll)
   catChip: { borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, alignItems: 'center', minWidth: 90 },
-  catChipName: { color: '#fff', fontSize: 11, fontWeight: '700', marginTop: 2, textAlign: 'center' },
+  catChipAbbr: { color: 'rgba(255,255,255,0.6)', fontSize: 10, fontWeight: '800', letterSpacing: 1.2, marginBottom: 3 },
+  catChipName: { color: '#fff', fontSize: 11, fontWeight: '700', textAlign: 'center' },
 });
