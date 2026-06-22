@@ -1,14 +1,13 @@
-import { View, Text, FlatList, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Dimensions, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../lib/auth-store';
 import { useAppTheme, Colors } from '../../lib/theme';
-import LotCard, { formatZAR } from '../../components/LotCard';
-import { ListSkeleton } from '../../components/Skeleton';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SW } = Dimensions.get('window');
+const CARD_W = SW > 600 ? 320 : SW * 0.78;
 
 const CATEGORIES = [
   { name: 'Vehicles',          image: 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400&q=80' },
@@ -22,206 +21,179 @@ const CATEGORIES = [
   { name: 'Art & Jewellery',   image: 'https://images.unsplash.com/photo-1515405295579-ba7b45403062?w=400&q=80' },
 ];
 
-// Placeholder auction images per category
-const CATEGORY_IMAGES: Record<string, string> = {
-  'Vehicles': 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=600',
-  'Plant & Equipment': 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=600',
-  'Livestock': 'https://images.unsplash.com/photo-1516467508483-a7212febe31a?w=600',
-  'Property': 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=600',
-  'Industrial': 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=600',
-  'Household': 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600',
-  'Electronics': 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=600',
-  'Collectibles': 'https://images.unsplash.com/photo-1547996160-81dfa63595aa?w=600',
-  'Art & Jewellery': 'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=600',
-};
-
-type LotWithAuction = {
-  id: string; title: string; photos: string[];
-  starting_bid: number; current_bid: number | null;
-  category: string | null; created_at: string;
-  auctions: { end_at: string | null } | null;
-};
-
-async function fetchLots(): Promise<LotWithAuction[]> {
-  const { data, error } = await supabase
-    .from('lots').select('id, title, photos, starting_bid, current_bid, category, created_at, auctions(end_at)')
-    .neq('closed', true)
-    .order('created_at', { ascending: false }).limit(50);
-  if (error) throw error;
-  return data as unknown as LotWithAuction[];
-}
-
-async function fetchWatchlistIds(userId: string | undefined): Promise<Set<string>> {
-  if (!userId) return new Set();
-  const { data, error } = await supabase.from('watchlist').select('lot_id').eq('user_id', userId);
-  if (error) return new Set();
-  return new Set((data ?? []).map((w) => w.lot_id));
-}
-
-async function fetchLiveSessions(): Promise<{ auction_id: string; auctions: { title: string } | null }[]> {
-  const { data } = await supabase.from('live_sessions').select('auction_id, auctions(title)').eq('status', 'live');
-  return (data ?? []) as any;
-}
-
-async function fetchScheduledSessions(): Promise<{ auction_id: string; title: string | null; scheduled_at: string | null; lot_ids: string[] | null }[]> {
+async function fetchAuctionEvents() {
   const { data } = await supabase
     .from('live_sessions')
-    .select('auction_id, title, scheduled_at, lot_ids')
-    .eq('status', 'scheduled')
-    .gte('scheduled_at', new Date().toISOString())
-    .order('scheduled_at')
-    .limit(6);
-  return (data ?? []) as any;
+    .select('auction_id, title, scheduled_at, status, lot_ids, auctions(title, end_at)')
+    .in('status', ['live', 'scheduled'])
+    .order('scheduled_at');
+  return (data ?? []) as any[];
 }
 
-function AuctionEventCard({ session, lots }: { session: any; lots: LotWithAuction[] }) {
+async function fetchLotCovers(auctionIds: string[]) {
+  if (!auctionIds.length) return {};
+  const { data } = await supabase
+    .from('lots')
+    .select('auction_id, photos')
+    .in('auction_id', auctionIds)
+    .neq('photos', '{}')
+    .limit(30);
+  const map: Record<string, string> = {};
+  for (const l of data ?? []) {
+    if (!map[l.auction_id] && l.photos?.[0]) map[l.auction_id] = l.photos[0];
+  }
+  return map;
+}
+
+function AuctionEventCard({ session, cover }: { session: any; cover?: string }) {
+  const isLive = session.status === 'live';
   const dt = session.scheduled_at ? new Date(session.scheduled_at) : null;
   const dateStr = dt ? dt.toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
   const timeStr = dt ? dt.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' }) : '';
-
-  // Find a representative image from the lots
-  const sessionLots = lots.filter(l => session.lot_ids?.includes(l.id));
-  const coverImage = sessionLots.find(l => l.photos?.[0])?.photos?.[0]
-    ?? CATEGORY_IMAGES[sessionLots[0]?.category ?? '']
-    ?? 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=600';
+  const lotCount = session.lot_ids?.length ?? 0;
+  const title = session.title ?? session.auctions?.title ?? 'Auction Event';
+  const img = cover ?? 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=600&q=80';
 
   return (
-    <View style={s.auctionCard}>
-      <Image source={{ uri: coverImage }} style={s.auctionCardImage} resizeMode="cover" />
-      <View style={s.auctionCardOverlay} />
-      <View style={s.auctionCardContent}>
-        {dt && (
-          <Text style={s.auctionCardDate}>{dateStr}</Text>
+    <Pressable style={s.eventCard} onPress={() => router.push(`/live/${session.auction_id}`)}>
+      <Image source={{ uri: img }} style={s.eventImg} resizeMode="cover" />
+      <View style={s.eventImgOverlay} />
+      {isLive && (
+        <View style={s.liveBadge}>
+          <View style={s.liveDot} />
+          <Text style={s.liveBadgeTxt}>LIVE NOW</Text>
+        </View>
+      )}
+      <View style={s.eventContent}>
+        {dt && !isLive && (
+          <Text style={s.eventDate}>{dateStr.toUpperCase()}</Text>
         )}
-        <Text style={s.auctionCardTitle} numberOfLines={2}>{session.title ?? 'Live Auction'}</Text>
-        {dt && <Text style={s.auctionCardTime}>🕙 Starting at {timeStr}</Text>}
-        {sessionLots.length > 0 && (
-          <Text style={s.auctionCardLots}>{sessionLots.length} lot{sessionLots.length !== 1 ? 's' : ''} listed</Text>
-        )}
-        <Pressable style={s.auctionCardBtn} onPress={() => router.push(`/live/${session.auction_id}`)}>
-          <Text style={s.auctionCardBtnTxt}>More Info</Text>
-        </Pressable>
+        <Text style={s.eventTitle} numberOfLines={2}>{title}</Text>
+        <View style={s.eventMeta}>
+          {timeStr && !isLive && <Text style={s.eventMetaTxt}>🕙 {timeStr}</Text>}
+          {lotCount > 0 && <Text style={s.eventMetaTxt}>{lotCount} lot{lotCount !== 1 ? 's' : ''}</Text>}
+        </View>
+        <View style={s.eventBtn}>
+          <Text style={s.eventBtnTxt}>View Auction →</Text>
+        </View>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
 export default function Home() {
   const session = useAuthStore((s) => s.session);
   const profile = useAuthStore((s) => s.profile);
-  const { bg, card, border, ink, muted } = useAppTheme();
+  const { bg, ink, muted, border } = useAppTheme();
 
-  const { data: lots, isLoading, refetch, isRefetching } = useQuery({
-    queryKey: ['lots', 'home'], queryFn: fetchLots, refetchInterval: 15000,
+  const { data: events, isRefetching, refetch } = useQuery({
+    queryKey: ['auction-events'],
+    queryFn: fetchAuctionEvents,
+    refetchInterval: 15000,
   });
-  const { data: liveSessions } = useQuery({
-    queryKey: ['live-sessions'], queryFn: fetchLiveSessions, refetchInterval: 10000,
+
+  const auctionIds = (events ?? []).map((e: any) => e.auction_id);
+  const { data: covers } = useQuery({
+    queryKey: ['lot-covers', auctionIds.join(',')],
+    queryFn: () => fetchLotCovers(auctionIds),
+    enabled: auctionIds.length > 0,
   });
-  const { data: scheduledSessions } = useQuery({
-    queryKey: ['scheduled-sessions'], queryFn: fetchScheduledSessions, refetchInterval: 30000,
-  });
-  const { data: watchedIds } = useQuery({
-    queryKey: ['watchlist', session?.user.id],
-    queryFn: () => fetchWatchlistIds(session?.user.id),
-    enabled: !!session,
-  });
+
+  const liveEvents = (events ?? []).filter((e: any) => e.status === 'live');
+  const upcomingEvents = (events ?? []).filter((e: any) => e.status === 'scheduled');
 
   return (
     <SafeAreaView style={[s.root, { backgroundColor: bg }]}>
-      <FlatList
-        data={lots ?? []}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={{ paddingBottom: 40 }}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
-        ListHeaderComponent={
-          <View>
-            {/* Hero */}
-            <View style={s.hero}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <Image source={require('../../assets/logo.png')} style={s.heroLogo} resizeMode="contain" />
-                <View style={{ flex: 1 }}>
-                  <Text style={s.heroTitle}>West Coast Pickers</Text>
-                  <Text style={s.heroSub}>South Africa's Live Auction Marketplace 🇿🇦</Text>
-                </View>
-                <Pressable onPress={refetch} style={s.refreshBtn}>
-                  <Text style={{ fontSize: 16 }}>{isRefetching ? '⏳' : '🔄'}</Text>
-                </Pressable>
-              </View>
-              {profile && (
-                <Text style={s.welcomeTxt}>Welcome back, {profile.full_name.split(' ')[0]} 👋</Text>
-              )}
-            </View>
-
-            {/* LIVE NOW banner */}
-            {liveSessions && liveSessions.length > 0 && (
-              <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
-                {liveSessions.map((ls) => (
-                  <Pressable key={ls.auction_id} onPress={() => router.push(`/live/${ls.auction_id}`)} style={s.liveBanner}>
-                    <View style={s.livePulse} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.liveTxt}>🔴 LIVE NOW</Text>
-                      <Text style={s.liveSubTxt}>{ls.auctions?.title ?? 'Live Auction'} — Tap to join</Text>
-                    </View>
-                    <Text style={{ fontSize: 22 }}>🔊</Text>
-                  </Pressable>
-                ))}
-              </View>
-            )}
-
-            {/* Upcoming Auction Event Cards - bidway style */}
-            {scheduledSessions && scheduledSessions.length > 0 && (
-              <View style={{ marginBottom: 20 }}>
-                <View style={s.sectionHeader}>
-                  <Text style={[s.sectionTitle, { color: ink }]}>Upcoming Auctions</Text>
-                </View>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 14 }}>
-                  {scheduledSessions.map((ls) => (
-                    <AuctionEventCard key={ls.auction_id} session={ls} lots={lots ?? []} />
-                  ))}
-                </ScrollView>
-              </View>
-            )}
-
-            {/* Categories - Bidway image grid */}
-            <View style={{ paddingHorizontal: 16, marginBottom: 20 }}>
-              <Text style={[s.sectionTitle, { color: ink, marginBottom: 12 }]}>Browse by Category</Text>
-              <View style={s.catGrid}>
-                {CATEGORIES.map((cat) => (
-                  <Pressable
-                    key={cat.name}
-                    onPress={() => router.push({ pathname: '/(tabs)/search', params: { category: cat.name } })}
-                    style={s.catTile}
-                  >
-                    <Image source={{ uri: cat.image }} style={s.catTileImg} resizeMode="cover" />
-                    <View style={s.catTileOverlay} />
-                    <Text style={s.catTileName}>{cat.name}</Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-
-            {/* All Lots heading */}
-            <View style={[s.sectionHeader, { paddingHorizontal: 16 }]}>
-              <Text style={[s.sectionTitle, { color: ink }]}>All Lots</Text>
-            </View>
-            {isLoading && <ListSkeleton />}
+      <ScrollView
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={Colors.gold} />}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* ── HEADER ── */}
+        <View style={s.header}>
+          <Image source={require('../../assets/logo.png')} style={s.logo} resizeMode="contain" />
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={s.headerTitle}>West Coast Pickers</Text>
+            <Text style={s.headerSub}>South Africa's Live Auction Marketplace</Text>
           </View>
-        }
-        ListEmptyComponent={
-          !isLoading ? (
-            <View style={{ alignItems: 'center', marginTop: 40, paddingHorizontal: 32 }}>
-              <Text style={{ fontSize: 40, marginBottom: 12 }}>🔨</Text>
-              <Text style={{ fontSize: 16, color: ink, fontWeight: '700', marginBottom: 6 }}>No lots yet</Text>
-              <Text style={{ fontSize: 14, color: muted, textAlign: 'center' }}>
-                Check back soon — new items are added regularly.
-              </Text>
-            </View>
-          ) : null
-        }
-        renderItem={({ item, index }) => (
-          <LotCard lot={{ ...item, end_at: item.auctions?.end_at }} index={index} isWatched={watchedIds?.has(item.id)} />
+          <Pressable onPress={refetch} style={s.refreshBtn}>
+            <Text style={{ fontSize: 15 }}>{isRefetching ? '⏳' : '🔄'}</Text>
+          </Pressable>
+        </View>
+
+        {profile && (
+          <View style={[s.welcomeBar, { borderBottomColor: border }]}>
+            <Text style={[s.welcomeTxt, { color: muted }]}>Welcome back, <Text style={{ color: Colors.gold, fontWeight: '700' }}>{profile.full_name.split(' ')[0]}</Text></Text>
+          </View>
         )}
-      />
+
+        {/* ── LIVE NOW ── */}
+        {liveEvents.length > 0 && (
+          <View style={s.section}>
+            {liveEvents.map((e: any) => (
+              <Pressable key={e.auction_id} onPress={() => router.push(`/live/${e.auction_id}`)} style={s.liveBanner}>
+                <View style={s.livePulse} />
+                <View style={{ flex: 1 }}>
+                  <Text style={s.liveBannerTitle}>🔴 AUCTION LIVE NOW</Text>
+                  <Text style={s.liveBannerSub}>{e.title ?? e.auctions?.title ?? 'Live Auction'} — Tap to join</Text>
+                </View>
+                <Text style={{ fontSize: 22 }}>🔊</Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
+
+        {/* ── UPCOMING AUCTIONS ── */}
+        {upcomingEvents.length > 0 && (
+          <View style={{ marginBottom: 24 }}>
+            <View style={s.sectionHeader}>
+              <Text style={[s.sectionTitle, { color: ink }]}>Upcoming Auctions</Text>
+              <View style={s.goldLine} />
+            </View>
+            <FlatList
+              data={upcomingEvents}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(item: any) => item.auction_id}
+              contentContainerStyle={{ paddingHorizontal: 16, gap: 14 }}
+              renderItem={({ item }: any) => (
+                <AuctionEventCard session={item} cover={covers?.[item.auction_id]} />
+              )}
+            />
+          </View>
+        )}
+
+        {/* ── NO EVENTS PLACEHOLDER ── */}
+        {(!events || events.length === 0) && (
+          <View style={s.emptyEvents}>
+            <Text style={{ fontSize: 48, marginBottom: 12 }}>🔨</Text>
+            <Text style={[s.emptyTitle, { color: ink }]}>No auctions scheduled yet</Text>
+            <Text style={[s.emptyBody, { color: muted }]}>Check back soon — new events are added regularly.</Text>
+          </View>
+        )}
+
+        {/* ── BROWSE BY CATEGORY ── */}
+        <View style={s.section}>
+          <View style={s.sectionHeader}>
+            <Text style={[s.sectionTitle, { color: ink }]}>Browse by Category</Text>
+            <View style={s.goldLine} />
+          </View>
+          <View style={[s.catGrid, { paddingHorizontal: 16 }]}>
+            {CATEGORIES.map((cat) => (
+              <Pressable
+                key={cat.name}
+                onPress={() => router.push({ pathname: '/(tabs)/search', params: { category: cat.name } })}
+                style={s.catTile}
+              >
+                <Image source={{ uri: cat.image }} style={s.catTileImg} resizeMode="cover" />
+                <View style={s.catTileOverlay} />
+                <Text style={s.catTileName}>{cat.name}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
+        <View style={{ height: 32 }} />
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -229,40 +201,52 @@ export default function Home() {
 const s = StyleSheet.create({
   root: { flex: 1 },
 
-  // Hero
-  hero: { backgroundColor: Colors.primary, paddingHorizontal: 18, paddingTop: 14, paddingBottom: 20, marginBottom: 16 },
-  heroLogo: { width: 44, height: 44, borderRadius: 10 },
-  heroTitle: { color: '#fff', fontSize: 22, fontWeight: '800' },
-  heroSub: { color: 'rgba(255,255,255,0.75)', fontSize: 11 },
-  welcomeTxt: { color: 'rgba(255,255,255,0.9)', fontSize: 13, marginTop: 10, fontStyle: 'italic' },
-  refreshBtn: { padding: 8, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.15)' },
+  // Header
+  header: { backgroundColor: Colors.navy, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 },
+  logo: { width: 52, height: 52 },
+  headerTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: '800', letterSpacing: 0.2 },
+  headerSub: { color: 'rgba(255,255,255,0.55)', fontSize: 11, marginTop: 1 },
+  refreshBtn: { padding: 8, borderRadius: 8, backgroundColor: 'rgba(196,154,34,0.15)' },
+
+  welcomeBar: { paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1 },
+  welcomeTxt: { fontSize: 13 },
 
   // Live banner
-  liveBanner: { backgroundColor: '#DC2626', borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  livePulse: { width: 12, height: 12, borderRadius: 6, backgroundColor: '#fff' },
-  liveTxt: { color: '#fff', fontWeight: '800', fontSize: 14 },
-  liveSubTxt: { color: 'rgba(255,255,255,0.85)', fontSize: 12, marginTop: 2 },
+  liveBanner: { backgroundColor: Colors.navy, borderWidth: 1.5, borderColor: '#DC2626', borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  livePulse: { width: 12, height: 12, borderRadius: 6, backgroundColor: '#DC2626' },
+  liveBannerTitle: { color: '#fff', fontWeight: '800', fontSize: 14 },
+  liveBannerSub: { color: 'rgba(255,255,255,0.75)', fontSize: 12, marginTop: 2 },
 
-  // Section headers
-  sectionHeader: { paddingHorizontal: 16, marginBottom: 10 },
-  sectionTitle: { fontSize: 16, fontWeight: '800' },
+  // Section
+  section: { paddingHorizontal: 16, marginBottom: 24 },
+  sectionHeader: { paddingHorizontal: 16, marginBottom: 14 },
+  sectionTitle: { fontSize: 17, fontWeight: '800', letterSpacing: 0.2, marginBottom: 6 },
+  goldLine: { width: 36, height: 3, backgroundColor: Colors.gold, borderRadius: 2 },
 
-  // Auction event card (bidway style)
-  auctionCard: { width: SCREEN_WIDTH * 0.72, borderRadius: 16, overflow: 'hidden', backgroundColor: '#0D1B2A', marginBottom: 4 },
-  auctionCardImage: { width: '100%', height: 160 },
-  auctionCardOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.35)', top: 0, height: 160 },
-  auctionCardContent: { padding: 14 },
-  auctionCardDate: { color: '#F97316', fontWeight: '700', fontSize: 12, letterSpacing: 0.5, marginBottom: 4, textTransform: 'uppercase' },
-  auctionCardTitle: { color: '#fff', fontWeight: '800', fontSize: 16, marginBottom: 6, lineHeight: 22 },
-  auctionCardTime: { color: 'rgba(255,255,255,0.7)', fontSize: 12, marginBottom: 4 },
-  auctionCardLots: { color: 'rgba(255,255,255,0.6)', fontSize: 11, marginBottom: 12 },
-  auctionCardBtn: { backgroundColor: '#F97316', borderRadius: 8, paddingVertical: 10, alignItems: 'center' },
-  auctionCardBtnTxt: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  // Auction event card
+  eventCard: { width: CARD_W, borderRadius: 16, overflow: 'hidden', backgroundColor: Colors.navy },
+  eventImg: { width: '100%', height: 180 },
+  eventImgOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(13,27,46,0.45)', top: 0, height: 180 },
+  liveBadge: { position: 'absolute', top: 12, left: 12, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#DC2626', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
+  liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#fff' },
+  liveBadgeTxt: { color: '#fff', fontWeight: '800', fontSize: 11, letterSpacing: 0.5 },
+  eventContent: { padding: 14 },
+  eventDate: { color: Colors.gold, fontWeight: '700', fontSize: 11, letterSpacing: 0.8, marginBottom: 6 },
+  eventTitle: { color: '#fff', fontWeight: '800', fontSize: 16, lineHeight: 22, marginBottom: 8 },
+  eventMeta: { flexDirection: 'row', gap: 12, marginBottom: 14 },
+  eventMetaTxt: { color: 'rgba(255,255,255,0.6)', fontSize: 12 },
+  eventBtn: { backgroundColor: Colors.gold, borderRadius: 8, paddingVertical: 10, alignItems: 'center' },
+  eventBtnTxt: { color: Colors.navy, fontWeight: '800', fontSize: 14 },
 
-  // Category image grid (Bidway style)
+  // Empty state
+  emptyEvents: { alignItems: 'center', paddingVertical: 48, paddingHorizontal: 32 },
+  emptyTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8 },
+  emptyBody: { fontSize: 14, textAlign: 'center', lineHeight: 20 },
+
+  // Category grid
   catGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  catTile: { width: (SCREEN_WIDTH - 32 - 10) / 2, height: 90, borderRadius: 12, overflow: 'hidden', position: 'relative' },
+  catTile: { width: (SW - 42) / 2, height: 96, borderRadius: 12, overflow: 'hidden' },
   catTileImg: { width: '100%', height: '100%' },
-  catTileOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.42)' },
-  catTileName: { position: 'absolute', bottom: 10, left: 10, right: 10, color: '#fff', fontWeight: '800', fontSize: 13 },
+  catTileOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(13,27,46,0.52)' },
+  catTileName: { position: 'absolute', bottom: 10, left: 10, right: 10, color: '#fff', fontWeight: '800', fontSize: 13, letterSpacing: 0.2 },
 });
