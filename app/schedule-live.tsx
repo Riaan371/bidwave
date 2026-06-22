@@ -8,11 +8,14 @@ import { useAuthStore } from '../lib/auth-store';
 import { useAppTheme, Colors } from '../lib/theme';
 import { formatZAR } from '../components/LotCard';
 
+type AuctionType = 'timed' | 'live';
+
 export default function ScheduleLive() {
   const session = useAuthStore((s) => s.session);
   const { bg, card, border, ink, muted, input } = useAppTheme();
   const queryClient = useQueryClient();
 
+  const [auctionType, setAuctionType] = useState<AuctionType>('timed');
   const [title, setTitle] = useState('');
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
@@ -29,28 +32,32 @@ export default function ScheduleLive() {
 
   const removeLot = (id: string) => setPickedLots((prev) => prev.filter((l) => l.id !== id));
 
+  const parseDateTime = (): string | null => {
+    if (!date) return null;
+    const [d, m, y] = date.split('/');
+    const [h, min] = (time || '00:00').split(':');
+    const dt = new Date(Number(y), Number(m) - 1, Number(d), Number(h), Number(min));
+    if (isNaN(dt.getTime())) throw new Error('Invalid date or time format (use DD/MM/YYYY and HH:MM)');
+    return dt.toISOString();
+  };
+
   const schedule = useMutation({
     mutationFn: async () => {
       if (!session) throw new Error('Not logged in');
       if (!title.trim()) throw new Error('Please enter an auction title');
       if (pickedLots.length === 0) throw new Error('Please select at least one lot');
 
-      let scheduledAt: string | null = null;
-      if (date && time) {
-        const [d, m, y] = date.split('/');
-        const [h, min] = time.split(':');
-        const dt = new Date(Number(y), Number(m) - 1, Number(d), Number(h), Number(min));
-        if (isNaN(dt.getTime())) throw new Error('Invalid date or time format');
-        scheduledAt = dt.toISOString();
-      }
+      const deadlineAt = parseDateTime();
+      if (auctionType === 'timed' && !deadlineAt) throw new Error('Please enter a closing date for the timed auction');
 
-      // 1. Create a real auction record
+      // 1. Create auction record
       const { data: auction, error: auctionErr } = await supabase
         .from('auctions')
         .insert({
           title: title.trim(),
           auctioneer_id: session.user.id,
-          end_at: scheduledAt ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          auction_type: auctionType,
+          end_at: deadlineAt ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         })
         .select('id')
         .single();
@@ -59,27 +66,35 @@ export default function ScheduleLive() {
       const auctionId = auction.id;
       const lotIds = pickedLots.map((l) => l.id);
 
-      // 2. Link selected lots to this auction
-      await supabase.from('lots').update({ auction_id: auctionId }).in('id', lotIds);
+      // 2. Link lots to this auction
+      const { error: lotsErr } = await supabase.from('lots').update({ auction_id: auctionId }).in('id', lotIds);
+      if (lotsErr) throw new Error('Failed to link lots: ' + lotsErr.message);
 
-      // 3. Create the live session
-      const { error: sessionErr } = await supabase.from('live_sessions').insert({
-        auction_id: auctionId,
-        auctioneer_id: session.user.id,
-        channel_name: auctionId,
-        status: scheduledAt ? 'scheduled' : 'live',
-        scheduled_at: scheduledAt,
-        lot_ids: lotIds,
-        current_lot_index: 0,
-        title: title.trim(),
-      });
-      if (sessionErr) throw new Error('Failed to create session: ' + sessionErr.message);
+      // 3. For live auctions only: create a live session
+      if (auctionType === 'live') {
+        const scheduledAt = parseDateTime();
+        const { error: sessionErr } = await supabase.from('live_sessions').insert({
+          auction_id: auctionId,
+          auctioneer_id: session.user.id,
+          channel_name: auctionId,
+          status: scheduledAt ? 'scheduled' : 'live',
+          scheduled_at: scheduledAt,
+          lot_ids: lotIds,
+          current_lot_index: 0,
+          title: title.trim(),
+        });
+        if (sessionErr) throw new Error('Failed to create live session: ' + sessionErr.message);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['auction-events'] });
+      queryClient.invalidateQueries({ queryKey: ['timed-auctions'] });
       queryClient.invalidateQueries({ queryKey: ['my-sessions'] });
       queryClient.invalidateQueries({ queryKey: ['auctioneer-lots'] });
-      Alert.alert('Auction Scheduled! 🎉', 'Your auction is now visible on the home screen.', [
+      const msg = auctionType === 'timed'
+        ? 'Your timed auction is now live on the home screen. Bidders can place bids until the deadline.'
+        : 'Your live auction is scheduled and visible on the home screen.';
+      Alert.alert('Auction Published! 🎉', msg, [
         { text: 'View Home', onPress: () => router.replace('/(tabs)') },
         { text: 'Back to Profile', onPress: () => router.replace('/(tabs)/profile') },
       ]);
@@ -93,7 +108,7 @@ export default function ScheduleLive() {
     <SafeAreaView style={[s.root, { backgroundColor: bg }]}>
       <Stack.Screen options={{
         headerShown: true,
-        title: 'Schedule Live Auction',
+        title: 'Create Auction',
         headerStyle: { backgroundColor: Colors.navy },
         headerTintColor: '#fff',
         headerLeft: () => (
@@ -105,24 +120,57 @@ export default function ScheduleLive() {
 
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 120 }}>
 
-        {/* Session Details */}
+        {/* Auction Type Toggle */}
+        <View style={[s.card, { backgroundColor: card, borderColor: border, marginBottom: 16 }]}>
+          <Text style={[s.sectionTitle, { color: ink }]}>Auction Type</Text>
+          <View style={s.typeRow}>
+            <Pressable
+              onPress={() => setAuctionType('timed')}
+              style={[s.typeBtn, auctionType === 'timed' && s.typeBtnActive]}
+            >
+              <Text style={[s.typeIcon]}>⏱</Text>
+              <Text style={[s.typeName, { color: auctionType === 'timed' ? Colors.navy : ink }]}>Timed Auction</Text>
+              <Text style={[s.typeDesc, { color: auctionType === 'timed' ? Colors.navy : muted }]}>
+                Always online — bidders bid anytime until deadline
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setAuctionType('live')}
+              style={[s.typeBtn, auctionType === 'live' && s.typeBtnActive]}
+            >
+              <Text style={[s.typeIcon]}>🔴</Text>
+              <Text style={[s.typeName, { color: auctionType === 'live' ? Colors.navy : ink }]}>Live Auction</Text>
+              <Text style={[s.typeDesc, { color: auctionType === 'live' ? Colors.navy : muted }]}>
+                Real-time event — you host, bidders join live
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+
+        {/* Auction Details */}
         <View style={[s.card, { backgroundColor: card, borderColor: border }]}>
           <Text style={[s.sectionTitle, { color: ink }]}>Auction Details</Text>
 
           <Text style={[s.label, { color: muted }]}>Auction Title *</Text>
           <TextInput value={title} onChangeText={setTitle}
-            placeholder='e.g. "Vehicle & Plant Auction — July 2026"'
+            placeholder='e.g. "Vehicle Auction — July 2026"'
             placeholderTextColor="#9CA3AF" style={[inputStyle, s.mb]} />
 
-          <Text style={[s.label, { color: muted }]}>Date (DD/MM/YYYY)</Text>
+          <Text style={[s.label, { color: muted }]}>
+            {auctionType === 'timed' ? 'Closing Date (DD/MM/YYYY) *' : 'Event Date (DD/MM/YYYY)'}
+          </Text>
           <TextInput value={date} onChangeText={setDate} placeholder="30/06/2026"
             placeholderTextColor="#9CA3AF" keyboardType="numeric" style={[inputStyle, s.mb]} />
 
-          <Text style={[s.label, { color: muted }]}>Time (HH:MM)</Text>
+          <Text style={[s.label, { color: muted }]}>
+            {auctionType === 'timed' ? 'Closing Time (HH:MM) *' : 'Event Time (HH:MM)'}
+          </Text>
           <TextInput value={time} onChangeText={setTime} placeholder="18:00"
             placeholderTextColor="#9CA3AF" keyboardType="numeric" style={[inputStyle]} />
           <Text style={{ color: muted, fontSize: 12, marginTop: 6 }}>
-            Leave blank to go live immediately.
+            {auctionType === 'timed'
+              ? 'Bidding closes at this date and time.'
+              : 'Leave blank to go live immediately.'}
           </Text>
         </View>
 
@@ -130,7 +178,9 @@ export default function ScheduleLive() {
         <View style={[s.card, { backgroundColor: card, borderColor: border, marginTop: 16 }]}>
           <Text style={[s.sectionTitle, { color: ink }]}>Lots on the Block</Text>
           <Text style={{ color: muted, fontSize: 13, marginBottom: 14 }}>
-            Select lots from your inventory. Bidders will see and bid on these during the live session.
+            {auctionType === 'timed'
+              ? 'Select lots from your inventory. All lots will be visible to bidders immediately.'
+              : 'Select lots from your inventory. Lots go one-by-one during your live session.'}
           </Text>
 
           <Pressable
@@ -170,7 +220,9 @@ export default function ScheduleLive() {
         >
           {schedule.isPending
             ? <ActivityIndicator color={Colors.navy} />
-            : <Text style={s.submitBtnTxt}>📅 Publish Auction to Home Screen</Text>}
+            : <Text style={s.submitBtnTxt}>
+                {auctionType === 'timed' ? '⏱ Publish Timed Auction' : '🔴 Schedule Live Auction'}
+              </Text>}
         </Pressable>
       </View>
     </SafeAreaView>
@@ -184,6 +236,14 @@ const s = StyleSheet.create({
   label: { fontSize: 12, fontWeight: '700', marginBottom: 5, textTransform: 'uppercase', letterSpacing: 0.4 },
   input: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 11, fontSize: 15 },
   mb: { marginBottom: 14 },
+  // Type toggle
+  typeRow: { flexDirection: 'row', gap: 10 },
+  typeBtn: { flex: 1, borderWidth: 1.5, borderColor: '#E5E7EB', borderRadius: 14, padding: 14, alignItems: 'center' },
+  typeBtnActive: { backgroundColor: Colors.gold, borderColor: Colors.gold },
+  typeIcon: { fontSize: 24, marginBottom: 6 },
+  typeName: { fontWeight: '800', fontSize: 14, marginBottom: 4 },
+  typeDesc: { fontSize: 11, textAlign: 'center', lineHeight: 15 },
+  // Lot picker
   pickBtn: { borderWidth: 1.5, borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginBottom: 14 },
   lotRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 12, padding: 10, marginBottom: 8 },
   lotNum: { fontSize: 13, fontWeight: '700', width: 26 },

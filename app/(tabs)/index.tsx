@@ -22,12 +22,31 @@ const CATEGORIES = [
 ];
 
 async function fetchAuctionEvents() {
-  const { data } = await supabase
+  // Live sessions (live + scheduled)
+  const { data: sessions } = await supabase
     .from('live_sessions')
-    .select('auction_id, title, scheduled_at, status, lot_ids, auctions(title, end_at)')
+    .select('auction_id, title, scheduled_at, status, lot_ids, auctions(title, end_at, auction_type)')
     .in('status', ['live', 'scheduled'])
     .order('scheduled_at');
-  return (data ?? []) as any[];
+
+  // Timed auctions (not yet closed)
+  const { data: timed } = await supabase
+    .from('auctions')
+    .select('id, title, end_at, auction_type')
+    .eq('auction_type', 'timed')
+    .gt('end_at', new Date().toISOString())
+    .order('end_at');
+
+  const timedMapped = (timed ?? []).map((a: any) => ({
+    auction_id: a.id,
+    title: a.title,
+    scheduled_at: a.end_at,
+    status: 'timed',
+    lot_ids: null,
+    auctions: { title: a.title, end_at: a.end_at, auction_type: 'timed' },
+  }));
+
+  return [...(sessions ?? []), ...timedMapped] as any[];
 }
 
 async function fetchLotCovers(auctionIds: string[]) {
@@ -81,8 +100,20 @@ function PhotoCollage({ photos }: { photos: string[] }) {
   );
 }
 
+function timeUntil(isoDate: string): string {
+  const diff = new Date(isoDate).getTime() - Date.now();
+  if (diff <= 0) return 'Closed';
+  const days = Math.floor(diff / 86400000);
+  const hrs = Math.floor((diff % 86400000) / 3600000);
+  const mins = Math.floor((diff % 3600000) / 60000);
+  if (days > 0) return `${days}d ${hrs}h remaining`;
+  if (hrs > 0) return `${hrs}h ${mins}m remaining`;
+  return `${mins}m remaining`;
+}
+
 function AuctionEventCard({ session, photos }: { session: any; photos?: string[] }) {
   const isLive = session.status === 'live';
+  const isTimed = session.status === 'timed';
   const dt = session.scheduled_at ? new Date(session.scheduled_at) : null;
   const dateStr = dt ? dt.toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
   const timeStr = dt ? dt.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' }) : '';
@@ -91,7 +122,6 @@ function AuctionEventCard({ session, photos }: { session: any; photos?: string[]
 
   return (
     <Pressable style={s.eventCard} onPress={() => router.push(`/live/${session.auction_id}`)}>
-      {/* Photo collage from actual lot images */}
       <PhotoCollage photos={photos ?? []} />
       <View style={s.eventImgOverlay} />
       {isLive && (
@@ -100,15 +130,24 @@ function AuctionEventCard({ session, photos }: { session: any; photos?: string[]
           <Text style={s.liveBadgeTxt}>LIVE NOW</Text>
         </View>
       )}
+      {isTimed && (
+        <View style={[s.liveBadge, { backgroundColor: Colors.navy, borderWidth: 1, borderColor: Colors.gold }]}>
+          <Text style={[s.liveBadgeTxt, { color: Colors.gold }]}>⏱ TIMED</Text>
+        </View>
+      )}
       <View style={s.eventContent}>
-        {dt && !isLive && <Text style={s.eventDate}>{dateStr.toUpperCase()}</Text>}
+        {isTimed && dt && (
+          <Text style={s.eventDate}>{timeUntil(dt.toISOString()).toUpperCase()}</Text>
+        )}
+        {!isTimed && dt && !isLive && <Text style={s.eventDate}>{dateStr.toUpperCase()}</Text>}
         <Text style={s.eventTitle} numberOfLines={2}>{title}</Text>
         <View style={s.eventMeta}>
-          {timeStr && !isLive && <Text style={s.eventMetaTxt}>🕙 {timeStr}</Text>}
+          {isTimed && dt && <Text style={s.eventMetaTxt}>🗓 Closes {dateStr}</Text>}
+          {timeStr && !isLive && !isTimed && <Text style={s.eventMetaTxt}>🕙 {timeStr}</Text>}
           {lotCount > 0 && <Text style={s.eventMetaTxt}>🔨 {lotCount} lot{lotCount !== 1 ? 's' : ''}</Text>}
         </View>
         <View style={s.eventBtn}>
-          <Text style={s.eventBtnTxt}>View Auction →</Text>
+          <Text style={s.eventBtnTxt}>{isTimed ? 'Bid Now →' : 'View Auction →'}</Text>
         </View>
       </View>
     </Pressable>
@@ -134,7 +173,7 @@ export default function Home() {
   }); // covers: Record<auctionId, string[]>
 
   const liveEvents = (events ?? []).filter((e: any) => e.status === 'live');
-  const upcomingEvents = (events ?? []).filter((e: any) => e.status === 'scheduled');
+  const upcomingEvents = (events ?? []).filter((e: any) => e.status === 'scheduled' || e.status === 'timed');
 
   return (
     <SafeAreaView style={[s.root, { backgroundColor: bg }]}>
@@ -180,7 +219,7 @@ export default function Home() {
         {upcomingEvents.length > 0 && (
           <View style={{ marginBottom: 24 }}>
             <View style={s.sectionHeader}>
-              <Text style={[s.sectionTitle, { color: ink }]}>Upcoming Auctions</Text>
+              <Text style={[s.sectionTitle, { color: ink }]}>Active Auctions</Text>
               <View style={s.goldLine} />
             </View>
             <FlatList
