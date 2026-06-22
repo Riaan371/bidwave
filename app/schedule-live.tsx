@@ -18,7 +18,8 @@ export default function ScheduleLive() {
   const [auctionType, setAuctionType] = useState<AuctionType>('timed');
   const [title, setTitle] = useState('');
   const [date, setDate] = useState('');
-  const [time, setTime] = useState('');
+  const [hour, setHour] = useState('');
+  const [minute, setMinute] = useState('');
   const [pickedLots, setPickedLots] = useState<{ id: string; title: string; photos: string[]; current_bid: number | null; starting_bid: number }[]>([]);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
 
@@ -36,9 +37,10 @@ export default function ScheduleLive() {
   const parseDateTime = (): string | null => {
     if (!date) return null;
     const [d, m, y] = date.split('/');
-    const [h, min] = (time || '00:00').split(':');
+    const h = hour || '18';
+    const min = minute || '00';
     const dt = new Date(Number(y), Number(m) - 1, Number(d), Number(h), Number(min));
-    if (isNaN(dt.getTime())) throw new Error('Invalid date or time format (use DD/MM/YYYY and HH:MM)');
+    if (isNaN(dt.getTime())) throw new Error('Invalid date format — use DD/MM/YYYY');
     return dt.toISOString();
   };
 
@@ -162,14 +164,19 @@ export default function ScheduleLive() {
             placeholderTextColor="#9CA3AF" keyboardType="numeric" style={[inputStyle, s.mb]} />
 
           <Text style={[s.label, { color: muted }]}>
-            {auctionType === 'timed' ? 'Closing Time (HH:MM) *' : 'Event Time (HH:MM)'}
+            {auctionType === 'timed' ? 'Closing Time *' : 'Event Time'}
           </Text>
-          <TextInput value={time} onChangeText={setTime} placeholder="18:00"
-            placeholderTextColor="#9CA3AF" keyboardType="numeric" style={[inputStyle]} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <TextInput value={hour} onChangeText={(v) => setHour(v.replace(/[^0-9]/g, '').slice(0, 2))}
+              placeholder="18" placeholderTextColor="#9CA3AF" keyboardType="number-pad"
+              maxLength={2} style={[inputStyle, { flex: 1, textAlign: 'center' }]} />
+            <Text style={{ fontSize: 22, fontWeight: '800', color: ink }}>:</Text>
+            <TextInput value={minute} onChangeText={(v) => setMinute(v.replace(/[^0-9]/g, '').slice(0, 2))}
+              placeholder="00" placeholderTextColor="#9CA3AF" keyboardType="number-pad"
+              maxLength={2} style={[inputStyle, { flex: 1, textAlign: 'center' }]} />
+          </View>
           <Text style={{ color: muted, fontSize: 12, marginTop: 6 }}>
-            {auctionType === 'timed'
-              ? 'Bidding closes at this date and time.'
-              : 'Leave blank to go live immediately.'}
+            {auctionType === 'timed' ? 'Bidding closes at this time.' : 'Leave blank to go live immediately.'}
           </Text>
         </View>
 
