@@ -32,8 +32,8 @@ async function fetchAuctionEvents() {
   // Timed auctions (not yet closed)
   const { data: timed } = await supabase
     .from('auctions')
-    .select('id, title, end_at, auction_type')
-    .eq('auction_type', 'timed')
+    .select('id, title, end_at, type')
+    .eq('type', 'timed')
     .gt('end_at', new Date().toISOString())
     .order('end_at');
 

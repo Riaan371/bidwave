@@ -57,7 +57,7 @@ export default function ScheduleLive() {
         .insert({
           title: title.trim(),
           auctioneer_id: session.user.id,
-          auction_type: auctionType,
+          type: auctionType,
           end_at: deadlineAt ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         })
         .select('id')
