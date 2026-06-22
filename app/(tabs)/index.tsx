@@ -19,12 +19,12 @@ async function fetchAuctionEvents() {
     .in('status', ['live', 'scheduled'])
     .order('scheduled_at');
 
-  // Timed auctions (not yet closed)
+  // Timed auctions — all active ones (end_at may be null or future)
   const { data: timed } = await supabase
     .from('auctions')
-    .select('id, title, end_at, type')
+    .select('id, title, end_at, type, status')
     .eq('type', 'timed')
-    .gt('end_at', new Date().toISOString())
+    .eq('status', 'active')
     .order('end_at');
 
   const timedMapped = (timed ?? []).map((a: any) => ({
