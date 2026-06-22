@@ -17,7 +17,6 @@ function ActiveLotsPanel({ userId, ink, muted, card, border }: { userId: string;
       const { data, error } = await supabase
         .from('lots')
         .select('id, title, photos, starting_bid, current_bid, category, auction_id, auctions(title, status)')
-        .eq('auctioneer_id', userId)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data ?? [];

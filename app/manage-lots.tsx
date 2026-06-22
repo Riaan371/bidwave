@@ -53,7 +53,6 @@ export default function ManageLots() {
       const { data, error } = await supabase
         .from('lots')
         .select('id, title, photos, starting_bid, current_bid, category, winner_id, auction_id, auctions(title, status)')
-        .eq('auctioneer_id', session!.user.id)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data ?? [];
@@ -125,6 +124,7 @@ export default function ManageLots() {
         reserve: reserve ? Number(reserve) : null,
         buy_now: buyNow ? Number(buyNow) : null,
         increment: Number(increment) || 500,
+        auctioneer_id: session.user.id,
       }).select('id').single();
       if (error) throw error;
       return data;
