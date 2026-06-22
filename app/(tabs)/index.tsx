@@ -1,7 +1,8 @@
 import { View, Text, FlatList, Image, Pressable, RefreshControl, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../lib/auth-store';
 import { useAppTheme, Colors } from '../../lib/theme';
@@ -83,15 +84,30 @@ export default function Home() {
   const session = useAuthStore((s) => s.session);
   const profile = useAuthStore((s) => s.profile);
   const { bg, card, border, ink, muted } = useAppTheme();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('home-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'lots' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['lots', 'home'] });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'live_sessions' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['live-sessions'] });
+        queryClient.invalidateQueries({ queryKey: ['scheduled-sessions'] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   const { data: lots, isLoading, refetch, isRefetching } = useQuery({
-    queryKey: ['lots', 'home'], queryFn: fetchLots, refetchInterval: 15000,
+    queryKey: ['lots', 'home'], queryFn: fetchLots,
   });
   const { data: liveSessions } = useQuery({
-    queryKey: ['live-sessions'], queryFn: fetchLiveSessions, refetchInterval: 10000,
+    queryKey: ['live-sessions'], queryFn: fetchLiveSessions,
   });
   const { data: scheduledSessions } = useQuery({
-    queryKey: ['scheduled-sessions'], queryFn: fetchScheduledSessions, refetchInterval: 30000,
+    queryKey: ['scheduled-sessions'], queryFn: fetchScheduledSessions,
   });
   const { data: watchedIds } = useQuery({
     queryKey: ['watchlist', session?.user.id],
