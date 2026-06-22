@@ -154,16 +154,20 @@ export default function Home() {
 
   const [installPrompt, setInstallPrompt] = useState<any>(null);
   const [showInstall, setShowInstall] = useState(false);
+  const [showIOSGuide, setShowIOSGuide] = useState(false);
+  const isIOS = typeof navigator !== 'undefined' && /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isInStandalone = typeof window !== 'undefined' && (window.navigator as any).standalone === true;
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const handler = (e: any) => { e.preventDefault(); setInstallPrompt(e); setShowInstall(true); };
+    const handler = (e: any) => { e.preventDefault(); setInstallPrompt(e); };
     window.addEventListener('beforeinstallprompt', handler);
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
   const handleInstall = async () => {
-    if (!installPrompt) return;
+    if (isIOS) { setShowIOSGuide(true); return; }
+    if (!installPrompt) { setShowIOSGuide(true); return; }
     installPrompt.prompt();
     const { outcome } = await installPrompt.userChoice;
     if (outcome === 'accepted') setShowInstall(false);
@@ -210,18 +214,36 @@ export default function Home() {
         )}
 
         {/* ── INSTALL BANNER ── */}
-        {showInstall && (
+        {/* Install App banner — always visible unless already installed */}
+        {!isInStandalone && (
           <View style={s.installBanner}>
             <View style={{ flex: 1 }}>
-              <Text style={s.installTitle}>📲 Add to Home Screen</Text>
-              <Text style={s.installSub}>Install the West Coast Pickers app for the best experience</Text>
+              <Text style={s.installTitle}>📲 Install App</Text>
+              <Text style={s.installSub}>Add West Coast Pickers to your home screen</Text>
             </View>
             <Pressable onPress={handleInstall} style={s.installBtn}>
               <Text style={s.installBtnTxt}>Install</Text>
             </Pressable>
-            <Pressable onPress={() => setShowInstall(false)} style={s.installDismiss}>
-              <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 18 }}>×</Text>
-            </Pressable>
+          </View>
+        )}
+
+        {/* iOS install guide modal */}
+        {showIOSGuide && (
+          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 999, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+            <View style={{ backgroundColor: '#fff', borderRadius: 20, padding: 24, width: '100%', maxWidth: 360 }}>
+              <Text style={{ fontSize: 20, fontWeight: '800', color: Colors.navy, marginBottom: 8 }}>Install on iPhone / iPad</Text>
+              <Text style={{ color: '#374151', fontSize: 14, lineHeight: 22, marginBottom: 16 }}>
+                1. Tap the <Text style={{ fontWeight: '700' }}>Share</Text> button at the bottom of Safari {'\n'}
+                2. Scroll down and tap <Text style={{ fontWeight: '700' }}>"Add to Home Screen"</Text>{'\n'}
+                3. Tap <Text style={{ fontWeight: '700' }}>Add</Text> — done!
+              </Text>
+              <Text style={{ color: '#6B7280', fontSize: 12, marginBottom: 16 }}>
+                On Android (Chrome): tap the 3-dot menu → "Add to Home screen"
+              </Text>
+              <Pressable onPress={() => setShowIOSGuide(false)} style={{ backgroundColor: Colors.navy, borderRadius: 10, padding: 12, alignItems: 'center' }}>
+                <Text style={{ color: '#fff', fontWeight: '700' }}>Got it</Text>
+              </Pressable>
+            </View>
           </View>
         )}
 
