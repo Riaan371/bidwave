@@ -1,34 +1,31 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 
 const ONESIGNAL_APP_ID = 'e7382b34-2b96-4f8e-97db-7ef9505ae8c3';
-const ONESIGNAL_API_KEY = Deno.env.get('ONESIGNAL_API_KEY') ?? '';
+const ONESIGNAL_API_KEY = Deno.env.get('ONESIGNAL_REST_API_KEY') ?? '';
 
 serve(async (req) => {
   try {
-    const body = await req.json();
-    console.log('Webhook body:', JSON.stringify(body));
-    const record = body.record ?? body.new ?? body;
+    const payload = await req.json();
+    const record = payload.record ?? payload;
 
-    const status = record.status;
-    const title = record.title ?? 'Live Auction';
-    console.log('Status:', status, 'Title:', title);
-
-    let heading = '';
-    let message = '';
+    let title = 'West Coast Pickers';
+    let message = 'A new auction is available!';
     let url = 'https://bidwave.pages.dev';
 
-    if (status === 'scheduled') {
-      heading = '📅 New Auction Scheduled';
-      message = `"${title}" is coming up — mark your calendar!`;
-    } else if (status === 'live') {
-      heading = '🔴 LIVE NOW — West Coast Pickers';
-      message = `"${title}" is live! Tap to join the bidding now.`;
-      url = `https://bidwave.pages.dev/live/${record.auction_id}`;
-    } else {
-      return new Response('ignored', { status: 200 });
+    if (record.type === 'timed') {
+      title = '⏱ New Timed Auction';
+      message = `"${record.title}" is now open for bidding. Place your bids before the deadline!`;
+      url = `https://bidwave.pages.dev/auction/${record.id}`;
+    } else if (record.status === 'live') {
+      title = '🔴 Auction Going LIVE Now!';
+      message = `"${record.title}" is starting — join the live bidding now!`;
+      url = `https://bidwave.pages.dev/live/${record.id}`;
+    } else if (record.status === 'scheduled') {
+      title = '📅 Auction Scheduled';
+      message = `"${record.title}" has been scheduled. Mark your calendar!`;
     }
 
-    const res = await fetch('https://onesignal.com/api/v1/notifications', {
+    const response = await fetch('https://onesignal.com/api/v1/notifications', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -36,18 +33,17 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         app_id: ONESIGNAL_APP_ID,
-        included_segments: ['Total Subscriptions'],
-        headings: { en: heading },
+        included_segments: ['Total Subscribed'],
+        headings: { en: title },
         contents: { en: message },
         url,
-        chrome_web_icon: 'https://bidwave.pages.dev/icon-192-v2.png',
-        firefox_icon: 'https://bidwave.pages.dev/icon-192-v2.png',
+        chrome_web_icon: 'https://bidwave.pages.dev/assets/logo.png',
+        firefox_icon: 'https://bidwave.pages.dev/assets/logo.png',
       }),
     });
 
-    const data = await res.json();
-    console.log('OneSignal response:', JSON.stringify(data));
-    return new Response(JSON.stringify(data), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    const result = await response.json();
+    return new Response(JSON.stringify(result), { status: 200, headers: { 'Content-Type': 'application/json' } });
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message }), { status: 500 });
   }

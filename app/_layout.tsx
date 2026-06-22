@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
+import { initOneSignal } from '../lib/onesignal';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
@@ -18,6 +19,7 @@ export default function RootLayout() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    initOneSignal();
     initTheme();
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
