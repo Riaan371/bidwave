@@ -61,6 +61,23 @@ export default function LiveRoom() {
     refetchInterval: 4000,
   });
 
+  const { data: topBid } = useQuery({
+    queryKey: ['live-top-bid', activeLotId],
+    queryFn: async () => {
+      if (!activeLotId) return null;
+      const { data } = await supabase
+        .from('bids')
+        .select('amount, users(screen_name, full_name)')
+        .eq('lot_id', activeLotId)
+        .order('amount', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data as { amount: number; users: { screen_name: string | null; full_name: string } | null } | null;
+    },
+    enabled: !!activeLotId,
+    refetchInterval: 3000,
+  });
+
   const totalLots = liveSession?.lot_ids?.length ?? 0;
 
   async function nextLot() {
@@ -202,6 +219,13 @@ export default function LiveRoom() {
               <Text style={s.lotLabel}>NOW ON THE BLOCK</Text>
               <Text style={s.lotTitle}>{currentLot.title}</Text>
               <Text style={s.lotBid}>{formatZAR(currentLot.current_bid ?? currentLot.starting_bid)}</Text>
+              {topBid && (
+                <View style={{ backgroundColor: 'rgba(22,163,74,0.15)', borderRadius: 8, padding: 8, marginTop: 4, marginBottom: 4 }}>
+                  <Text style={{ color: '#16A34A', fontWeight: '700', fontSize: 13 }}>
+                    🏆 Top bidder: {topBid.users?.screen_name ?? topBid.users?.full_name ?? 'Unknown'}
+                  </Text>
+                </View>
+              )}
               {session && (
                 <Pressable onPress={() => router.push(`/lot/${currentLot.id}`)} style={[s.bidBtn, isHost && { backgroundColor: '#16A34A' }]}>
                   <Text style={s.bidBtnTxt}>{isHost ? '📋 View Live Bids' : 'Place a Bid'}</Text>
