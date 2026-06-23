@@ -40,3 +40,16 @@ export async function requestNotificationPermission(): Promise<boolean> {
     return false;
   }
 }
+
+// Tags this device's push subscription with the logged-in app user's ID,
+// so notifications can be targeted at a specific person with certainty.
+export async function linkOneSignalToUser(userId: string) {
+  if (typeof window === 'undefined') return;
+  const OneSignal = (window as any).OneSignal;
+  if (!OneSignal) return;
+  try {
+    await OneSignal.login(userId);
+  } catch {
+    // ignore — SDK may not be ready yet, harmless to skip
+  }
+}

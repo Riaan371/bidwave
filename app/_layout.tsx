@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
-import { initOneSignal } from '../lib/onesignal';
+import { initOneSignal, linkOneSignalToUser } from '../lib/onesignal';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
@@ -23,11 +23,13 @@ export default function RootLayout() {
     initTheme();
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
+      if (data.session) linkOneSignalToUser(data.session.user.id);
       loadProfile().finally(() => setReady(true));
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      if (session) linkOneSignalToUser(session.user.id);
       loadProfile();
     });
 
