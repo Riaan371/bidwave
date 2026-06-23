@@ -25,6 +25,18 @@ export default function LiveRoom() {
   const micTrackRef = useRef<AgoraTrack>(null);
   const remoteAudioRef = useRef<Set<any>>(new Set());
 
+  // Agora's track.close() doesn't always stop the underlying native
+  // MediaStreamTrack reliably — stop it directly so the browser/OS
+  // microphone-in-use indicator actually clears.
+  function hardStopMic() {
+    const track = micTrackRef.current;
+    if (track) {
+      try { track.getMediaStreamTrack?.()?.stop(); } catch {}
+      try { track.close(); } catch {}
+    }
+    micTrackRef.current = null;
+  }
+
   const [status, setStatus] = useState<'idle' | 'joining' | 'live' | 'ended'>('idle');
   const [micOn, setMicOn] = useState(true);
   const [listenerCount, setListenerCount] = useState(0);
@@ -206,7 +218,7 @@ export default function LiveRoom() {
     if (isHost && clientRef.current && micTrackRef.current) {
       try { await clientRef.current.unpublish(micTrackRef.current); } catch {}
     }
-    micTrackRef.current?.close();
+    hardStopMic();
     try { await clientRef.current?.leave(); } catch {}
     if (isHost) {
       try {
@@ -242,7 +254,7 @@ export default function LiveRoom() {
   }
 
   useEffect(() => {
-    return () => { micTrackRef.current?.close(); clientRef.current?.leave(); };
+    return () => { hardStopMic(); clientRef.current?.leave().catch(() => {}); };
   }, []);
 
   return (

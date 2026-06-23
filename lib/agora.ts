@@ -32,6 +32,13 @@ export async function markSessionLive(auctionId: string, userId: string) {
     { onConflict: 'auction_id' }
   );
   if (error) throw new Error(`Failed to mark session live: ${error.message}`);
+
+  const { error: auctionError } = await supabase
+    .from('auctions')
+    .update({ status: 'active' })
+    .eq('id', auctionId)
+    .eq('status', 'scheduled');
+  if (auctionError) throw new Error(`Failed to activate auction: ${auctionError.message}`);
 }
 
 export async function markSessionEnded(auctionId: string) {

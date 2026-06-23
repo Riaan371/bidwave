@@ -8,21 +8,37 @@ serve(async (req) => {
     const payload = await req.json();
     const record = payload.record ?? payload;
 
+    const oldRecord = payload.old_record ?? null;
+
+    // Only notify when status actually changed (avoid spamming on unrelated
+    // row updates, e.g. lots/end_at edits that don't change status).
+    if (oldRecord && oldRecord.status === record.status) {
+      return new Response(JSON.stringify({ skipped: 'status unchanged' }), { status: 200 });
+    }
+
     let title = 'West Coast Pickers';
     let message = 'A new auction is available!';
     let url = 'https://bidwave.pages.dev';
+    let shouldSend = true;
 
-    if (record.type === 'timed') {
+    if (record.type === 'timed' && record.status === 'active') {
       title = '⏱ New Timed Auction';
       message = `"${record.title}" is now open for bidding. Place your bids before the deadline!`;
       url = `https://bidwave.pages.dev/auction/${record.id}`;
-    } else if (record.status === 'live') {
+    } else if (record.type === 'live' && record.status === 'scheduled') {
+      title = '📅 Auction Scheduled';
+      message = `"${record.title}" has been scheduled. Mark your calendar!`;
+      url = `https://bidwave.pages.dev/live/${record.id}`;
+    } else if (record.type === 'live' && record.status === 'active') {
       title = '🔴 Auction Going LIVE Now!';
       message = `"${record.title}" is starting — join the live bidding now!`;
       url = `https://bidwave.pages.dev/live/${record.id}`;
-    } else if (record.status === 'scheduled') {
-      title = '📅 Auction Scheduled';
-      message = `"${record.title}" has been scheduled. Mark your calendar!`;
+    } else {
+      shouldSend = false;
+    }
+
+    if (!shouldSend) {
+      return new Response(JSON.stringify({ skipped: 'no matching status transition' }), { status: 200 });
     }
 
     const response = await fetch('https://api.onesignal.com/notifications?c=push', {

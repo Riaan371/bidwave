@@ -354,6 +354,7 @@ function AuctioneerPanel({ userId, ink, muted, card, border }: { userId: string;
   const goLive = async (auctionId: string) => {
     const { error } = await supabase.from('live_sessions').update({ status: 'live' }).eq('auction_id', auctionId);
     if (error) { Alert.alert('Error', error.message); return; }
+    await supabase.from('auctions').update({ status: 'active' }).eq('id', auctionId).eq('status', 'scheduled');
     queryClient.invalidateQueries({ queryKey: ['live-sessions'] });
     queryClient.invalidateQueries({ queryKey: ['my-sessions'] });
     router.push(`/live/${auctionId}`);
