@@ -129,6 +129,11 @@ function AuctionEventCard({ session, photos }: { session: any; photos?: string[]
           <Text style={[s.liveBadgeTxt, { color: Colors.gold }]}>⏱ TIMED</Text>
         </View>
       )}
+      {!isTimed && !isLive && (
+        <View style={[s.liveBadge, { backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#DC2626' }]}>
+          <Text style={[s.liveBadgeTxt, { color: '#DC2626' }]}>🔴 LIVE EVENT</Text>
+        </View>
+      )}
       <View style={s.eventContent}>
         {isTimed && dt && (
           <Text style={s.eventDate}>{timeUntil(dt.toISOString()).toUpperCase()}</Text>

@@ -16,6 +16,8 @@ export function initOneSignal() {
       appId: APP_ID,
       notifyButton: { enable: false },
       allowLocalhostAsSecureOrigin: true,
+      serviceWorkerPath: 'sw.js',
+      serviceWorkerParam: { scope: '/' },
     });
   });
 }
