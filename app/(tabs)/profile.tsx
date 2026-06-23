@@ -23,6 +23,7 @@ function confirmAsync(title: string, message: string): Promise<boolean> {
 
 function ActiveLotsPanel({ userId, ink, muted, card, border }: { userId: string; ink: string; muted: string; card: string; border: string }) {
   const [expanded, setExpanded] = useState(false);
+  const [completedExpanded, setCompletedExpanded] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: lots, isLoading } = useQuery({
@@ -72,13 +73,19 @@ function ActiveLotsPanel({ userId, ink, muted, card, border }: { userId: string;
     groups[aid].lots.push(lot);
   }
 
+  const closedStatuses = ['closed', 'cancelled'];
+  const activeGroupEntries = Object.entries(groups).filter(([, g]) => !closedStatuses.includes(g.status));
+  const closedGroupEntries = Object.entries(groups).filter(([, g]) => closedStatuses.includes(g.status));
+  const activeCount = activeGroupEntries.reduce((n, [, g]) => n + g.lots.length, 0) + inventory.length;
+  const completedCount = closedGroupEntries.reduce((n, [, g]) => n + g.lots.length, 0);
+
   if (!lots || lots.length === 0) return null;
 
   return (
     <View style={{ marginBottom: 10 }}>
       <Pressable onPress={() => setExpanded(v => !v)}
         style={[s.btn, { backgroundColor: Colors.navy, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }]}>
-        <Text style={[s.btnText, { color: '#fff' }]}>🔨 My Lots ({lots.length})</Text>
+        <Text style={[s.btnText, { color: '#fff' }]}>🔨 My Lots ({activeCount})</Text>
         <Text style={{ color: '#fff', fontSize: 13, marginLeft: 8 }}>{expanded ? '▲' : '▼'}</Text>
       </Pressable>
 
@@ -86,7 +93,7 @@ function ActiveLotsPanel({ userId, ink, muted, card, border }: { userId: string;
         <View style={[{ borderWidth: 1, borderRadius: 14, marginTop: 8, padding: 12 }, { borderColor: border, backgroundColor: card }]}>
           {isLoading && <ActivityIndicator color={Colors.gold} style={{ marginBottom: 12 }} />}
 
-          {Object.entries(groups).map(([aid, group]) => (
+          {activeGroupEntries.map(([aid, group]) => (
             <View key={aid} style={{ marginBottom: 10 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
                 <Text style={{ color: Colors.gold, fontWeight: '700', fontSize: 12, flex: 1 }}>📦 {group.title}</Text>
@@ -160,6 +167,59 @@ function ActiveLotsPanel({ userId, ink, muted, card, border }: { userId: string;
             style={{ marginTop: 4, padding: 10, borderRadius: 10, borderWidth: 1, borderColor: Colors.gold, alignItems: 'center' }}>
             <Text style={{ color: Colors.gold, fontWeight: '700', fontSize: 13 }}>Open Manage Lots →</Text>
           </Pressable>
+        </View>
+      )}
+
+      {closedGroupEntries.length > 0 && (
+        <View style={{ marginTop: 10 }}>
+          <Pressable onPress={() => setCompletedExpanded(v => !v)}
+            style={[s.btn, { backgroundColor: '#6B7280', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }]}>
+            <Text style={[s.btnText, { color: '#fff' }]}>✅ Completed Auctions ({completedCount})</Text>
+            <Text style={{ color: '#fff', fontSize: 13, marginLeft: 8 }}>{completedExpanded ? '▲' : '▼'}</Text>
+          </Pressable>
+
+          {completedExpanded && (
+            <View style={[{ borderWidth: 1, borderRadius: 14, marginTop: 8, padding: 12 }, { borderColor: border, backgroundColor: card }]}>
+              {closedGroupEntries.map(([aid, group]) => (
+                <View key={aid} style={{ marginBottom: 10 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                    <Text style={{ color: Colors.gold, fontWeight: '700', fontSize: 12, flex: 1 }}>📦 {group.title}</Text>
+                    <View style={{ backgroundColor: '#6B7280', borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2, marginRight: 6 }}>
+                      <Text style={{ color: '#fff', fontSize: 9, fontWeight: '700' }}>{group.status.toUpperCase()}</Text>
+                    </View>
+                    <Pressable onPress={() => deleteAuctionGroup(aid, group.title)} style={{ backgroundColor: '#FEE2E2', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
+                      <Text style={{ color: '#DC2626', fontSize: 11, fontWeight: '700' }}>🗑 Delete Auction</Text>
+                    </Pressable>
+                  </View>
+                  {group.lots.map((lot: any) => (
+                    <View key={lot.id} style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: border, borderRadius: 10, padding: 8, marginBottom: 6, backgroundColor: 'rgba(0,0,0,0.02)' }}>
+                      {lot.photos?.[0] ? (
+                        <Image source={{ uri: lot.photos[0] }} style={{ width: 46, height: 46, borderRadius: 8 }} />
+                      ) : (
+                        <View style={{ width: 46, height: 46, borderRadius: 8, backgroundColor: '#E5E7EB', alignItems: 'center', justifyContent: 'center' }}>
+                          <Text style={{ fontSize: 20 }}>📷</Text>
+                        </View>
+                      )}
+                      <View style={{ flex: 1, marginLeft: 10 }}>
+                        <Text style={{ color: ink, fontWeight: '600', fontSize: 13 }} numberOfLines={1}>{lot.title}</Text>
+                        <Text style={{ color: muted, fontSize: 11 }}>
+                          R{((lot.current_bid ?? lot.starting_bid) ?? 0).toLocaleString('en-ZA')} · {lot.category ?? '—'}
+                        </Text>
+                      </View>
+                      <Pressable onPress={() => router.push('/manage-lots')}
+                        style={{ backgroundColor: Colors.navy, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, marginLeft: 8 }}>
+                        <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>✏️ Edit</Text>
+                      </Pressable>
+                      <Pressable onPress={() => deleteLot(lot.id, lot.title)}
+                        style={{ backgroundColor: '#FEE2E2', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, marginLeft: 6 }}>
+                        <Text style={{ color: '#DC2626', fontSize: 12, fontWeight: '700' }}>🗑</Text>
+                      </Pressable>
+                    </View>
+                  ))}
+                </View>
+              ))}
+            </View>
+          )}
         </View>
       )}
     </View>

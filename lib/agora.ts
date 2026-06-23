@@ -41,4 +41,10 @@ export async function markSessionEnded(auctionId: string) {
     .eq('auction_id', auctionId)
     .eq('status', 'live');
   if (error) throw new Error(`Failed to end session: ${error.message}`);
+
+  const { error: auctionError } = await supabase
+    .from('auctions')
+    .update({ status: 'closed' })
+    .eq('id', auctionId);
+  if (auctionError) throw new Error(`Failed to close auction: ${auctionError.message}`);
 }
