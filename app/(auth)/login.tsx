@@ -31,15 +31,15 @@ export default function Login() {
     const meta = data.user.user_metadata as Record<string, string> | undefined;
     const { data: existing } = await supabase.from('users').select('id').eq('id', data.user.id).maybeSingle();
 
-    if (!existing && meta?.full_name) {
+    if (!existing) {
       await supabase.from('users').insert({
         id: data.user.id,
-        role: meta.role ?? 'bidder',
-        full_name: meta.full_name,
+        role: meta?.role ?? 'bidder',
+        full_name: meta?.full_name ?? data.user.email?.split('@')[0] ?? 'User',
         email: data.user.email,
-        phone: meta.phone,
-        id_number_hash: meta.id_number,
-        bank_token: JSON.stringify({ bankName: meta.bank_name, accountNumber: meta.account_number, branchCode: meta.branch_code }),
+        phone: meta?.phone,
+        id_number_hash: meta?.id_number,
+        bank_token: meta ? JSON.stringify({ bankName: meta.bank_name, accountNumber: meta.account_number, branchCode: meta.branch_code }) : null,
         kyc_status: 'pending',
       });
     }
