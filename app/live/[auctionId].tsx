@@ -238,7 +238,7 @@ export default function LiveRoom() {
           </View>
 
           {(previewLots ?? []).map((lot: any) => (
-            <View key={lot.id} style={s.previewLotCard}>
+            <Pressable key={lot.id} onPress={() => router.push(`/lot/${lot.id}`)} style={s.previewLotCard}>
               {lot.photos?.[0] ? (
                 <Image source={{ uri: lot.photos[0] }} style={s.previewLotImg} resizeMode="cover" />
               ) : (
@@ -254,7 +254,7 @@ export default function LiveRoom() {
                   <Text style={s.previewLockedTxt}>🔒 Locked until live</Text>
                 </View>
               </View>
-            </View>
+            </Pressable>
           ))}
 
           <Pressable onPress={() => router.push('/(tabs)/')} style={[s.outlineBtn, { marginTop: 12 }]}>
