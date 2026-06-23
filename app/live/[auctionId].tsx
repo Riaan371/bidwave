@@ -173,7 +173,14 @@ export default function LiveRoom() {
       setStatus('live');
     } catch (e: any) {
       clearTimeout(timeoutHandle);
-      setError(e.message ?? 'Failed to join');
+      const raw = e.message ?? 'Failed to join';
+      if (raw.includes('PERMISSION_DENIED') || raw.includes('NotAllowedError')) {
+        setError('🎙 Microphone access blocked. Click the 🔒 padlock icon in your browser address bar → set Microphone to "Allow" → refresh this page and try again.');
+      } else if (raw.includes('NotFoundError') || raw.includes('DevicesNotFoundError')) {
+        setError('🎙 No microphone found on this device. Connect a microphone and try again.');
+      } else {
+        setError(raw);
+      }
       setStatus('idle');
     }
   }
