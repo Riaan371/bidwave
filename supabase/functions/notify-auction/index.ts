@@ -25,14 +25,16 @@ serve(async (req) => {
       message = `"${record.title}" has been scheduled. Mark your calendar!`;
     }
 
-    const response = await fetch('https://onesignal.com/api/v1/notifications', {
+    const response = await fetch('https://api.onesignal.com/notifications?c=push', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
         'Authorization': `Key ${ONESIGNAL_API_KEY}`,
       },
       body: JSON.stringify({
         app_id: ONESIGNAL_APP_ID,
+        target_channel: 'push',
         included_segments: ['Total Subscriptions'],
         headings: { en: title },
         contents: { en: message },

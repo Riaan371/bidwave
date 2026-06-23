@@ -12,15 +12,17 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
 
   try {
-    const response = await fetch('https://onesignal.com/api/v1/notifications', {
+    const response = await fetch('https://api.onesignal.com/notifications?c=push', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
         'Authorization': `Key ${ONESIGNAL_API_KEY}`,
       },
       body: JSON.stringify({
         app_id: ONESIGNAL_APP_ID,
-        included_segments: ['Total Subscriptions'],
+        target_channel: 'push',
+        include_subscription_ids: ['887af7a8-6870-4a05-bcac-469fb10a4596'],
         headings: { en: '🔔 Test Notification' },
         contents: { en: 'Push notifications are working on West Coast Pickers!' },
         url: 'https://bidwave.pages.dev',
