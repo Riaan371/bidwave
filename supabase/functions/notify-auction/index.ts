@@ -33,7 +33,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         app_id: ONESIGNAL_APP_ID,
-        included_segments: ['Total Subscribed'],
+        included_segments: ['Total Subscriptions'],
         headings: { en: title },
         contents: { en: message },
         url,
