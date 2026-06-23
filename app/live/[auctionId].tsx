@@ -23,6 +23,7 @@ export default function LiveRoom() {
   const isHost = profile?.role === 'auctioneer';
   const clientRef = useRef<AgoraClient>(null);
   const micTrackRef = useRef<AgoraTrack>(null);
+  const remoteAudioRef = useRef<Set<any>>(new Set());
 
   const [status, setStatus] = useState<'idle' | 'joining' | 'live' | 'ended'>('idle');
   const [micOn, setMicOn] = useState(true);
@@ -45,6 +46,18 @@ export default function LiveRoom() {
 
   const sessionIsLive = sessionInfo?.status === 'live';
   const canAccess = isHost || sessionIsLive;
+
+  // Safeguard for listeners: if the polled session status flips away from 'live'
+  // (host ended the session), force-stop any remote audio and leave the channel
+  // even if Agora's own unpublish/left events were missed.
+  useEffect(() => {
+    if (!isHost && sessionInfo?.status === 'ended' && clientRef.current) {
+      remoteAudioRef.current.forEach((track) => track?.stop());
+      remoteAudioRef.current.clear();
+      clientRef.current.leave().catch(() => {});
+      setStatus('ended');
+    }
+  }, [isHost, sessionInfo?.status]);
 
   // Preview lots (photos + starting bid only) shown while waiting for the live session to start
   const { data: previewLots } = useQuery({
@@ -155,11 +168,15 @@ export default function LiveRoom() {
       clientRef.current = client;
       client.on('user-published', async (user: any, mediaType: string) => {
         await client.subscribe(user, mediaType);
-        if (mediaType === 'audio') user.audioTrack?.play();
+        if (mediaType === 'audio') { user.audioTrack?.play(); remoteAudioRef.current.add(user.audioTrack); }
       });
-      client.on('user-unpublished', (user: any) => { user.audioTrack?.stop(); });
+      client.on('user-unpublished', (user: any) => { user.audioTrack?.stop(); remoteAudioRef.current.delete(user.audioTrack); });
       client.on('user-joined', () => setListenerCount((c) => c + 1));
-      client.on('user-left', () => setListenerCount((c) => Math.max(0, c - 1)));
+      client.on('user-left', (user: any) => {
+        setListenerCount((c) => Math.max(0, c - 1));
+        user.audioTrack?.stop();
+        remoteAudioRef.current.delete(user.audioTrack);
+      });
       await client.setClientRole(isHost ? 'host' : 'audience');
       // token may be null when Agora app is in testing mode (no certificate required)
       await client.join(APP_ID, auctionId, token ?? null, null);
@@ -186,8 +203,11 @@ export default function LiveRoom() {
   }
 
   async function leave() {
+    if (isHost && clientRef.current && micTrackRef.current) {
+      try { await clientRef.current.unpublish(micTrackRef.current); } catch {}
+    }
     micTrackRef.current?.close();
-    await clientRef.current?.leave();
+    try { await clientRef.current?.leave(); } catch {}
     if (isHost) {
       try {
         // Close all unsold lots in this session so they disappear from home screen
