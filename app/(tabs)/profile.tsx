@@ -303,12 +303,12 @@ function SessionLotNames({ lotIds, ink, muted }: { lotIds: string[]; ink: string
 function AuctioneerPanel({ userId, ink, muted, card, border }: { userId: string; ink: string; muted: string; card: string; border: string }) {
   const queryClient = useQueryClient();
 
-  const goLive = async (id: string) => {
-    const { error } = await supabase.from('live_sessions').update({ status: 'live' }).eq('id', id);
+  const goLive = async (auctionId: string) => {
+    const { error } = await supabase.from('live_sessions').update({ status: 'live' }).eq('auction_id', auctionId);
     if (error) { Alert.alert('Error', error.message); return; }
     queryClient.invalidateQueries({ queryKey: ['live-sessions'] });
     queryClient.invalidateQueries({ queryKey: ['my-sessions'] });
-    router.push('/live/00000000-0000-0000-0000-0000000000a1');
+    router.push(`/live/${auctionId}`);
   };
 
   const { data: sessions, refetch } = useQuery({
@@ -316,7 +316,7 @@ function AuctioneerPanel({ userId, ink, muted, card, border }: { userId: string;
     queryFn: async () => {
       const { data } = await supabase
         .from('live_sessions')
-        .select('id, title, status, scheduled_at, lot_ids')
+        .select('id, auction_id, title, status, scheduled_at, lot_ids')
         .eq('auctioneer_id', userId)
         .in('status', ['scheduled', 'live'])
         .order('scheduled_at', { ascending: true });
@@ -362,7 +362,7 @@ function AuctioneerPanel({ userId, ink, muted, card, border }: { userId: string;
                     <Text style={{ color: Colors.gold, fontSize: 12, fontWeight: '600', marginTop: 2 }}>📅 {dateStr}</Text>
                   </View>
                   <View style={{ flexDirection: 'row', gap: 6, marginLeft: 8 }}>
-                    <Pressable onPress={() => goLive(s2.id)} style={{ paddingHorizontal: 10, paddingVertical: 5, backgroundColor: 'rgba(22,163,74,0.1)', borderRadius: 8 }}>
+                    <Pressable onPress={() => goLive(s2.auction_id)} style={{ paddingHorizontal: 10, paddingVertical: 5, backgroundColor: 'rgba(22,163,74,0.1)', borderRadius: 8 }}>
                       <Text style={{ color: '#16A34A', fontWeight: '700', fontSize: 12 }}>▶ Go Live</Text>
                     </Pressable>
                     <Pressable onPress={() => deleteSession(s2.id)} style={{ paddingHorizontal: 10, paddingVertical: 5, backgroundColor: 'rgba(220,38,38,0.1)', borderRadius: 8 }}>
