@@ -29,9 +29,9 @@ export default function LotDetail() {
   const { data: lot, isLoading } = useQuery({
     queryKey: ['lot', id],
     queryFn: async () => {
-      const { data, error } = await supabase.from('lots').select('*, auctions(end_at)').eq('id', id).single();
+      const { data, error } = await supabase.from('lots').select('*, auctions(end_at, type)').eq('id', id).single();
       if (error) throw error;
-      return data as Lot & { auctions: { end_at: string | null } | null };
+      return data as Lot & { auctions: { end_at: string | null; type: string | null } | null };
     },
     refetchInterval: 5000,
   });
@@ -50,6 +50,19 @@ export default function LotDetail() {
     },
     enabled: !!lot?.auction_id,
     refetchInterval: 4000,
+  });
+
+  const isLiveTypeAuction = lot?.auctions?.type === 'live';
+  const liveNotStarted = isLiveTypeAuction && !liveSession;
+
+  const { data: liveScheduleInfo } = useQuery({
+    queryKey: ['live-session-schedule', lot?.auction_id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('live_sessions').select('scheduled_at').eq('auction_id', lot!.auction_id).maybeSingle();
+      return data;
+    },
+    enabled: !!lot?.auction_id && liveNotStarted,
   });
 
   // Auto-redirect all users when auctioneer advances to next lot
@@ -157,6 +170,7 @@ export default function LotDetail() {
     mutationFn: async () => {
       if (!session) throw new Error('Please log in to bid.');
       if (!lot) throw new Error('Lot not loaded.');
+      if (liveNotStarted) throw new Error('Bidding opens when the auctioneer goes live.');
       const minBid = (lot.current_bid ?? lot.starting_bid) + lot.increment;
       const bidAmount = customBid ?? minBid;
       if (bidAmount < minBid) throw new Error(`Minimum bid is ${formatZAR(minBid)}`);
@@ -391,7 +405,17 @@ export default function LotDetail() {
           </View>
         </View>
       )}
-      {!isAuctioneer && !isClosed && (
+      {!isAuctioneer && !isClosed && liveNotStarted && (
+        <View style={[s.footer, { backgroundColor: card, borderTopColor: border, alignItems: 'center' }]}>
+          <Text style={{ fontSize: 13, fontWeight: '700', color: '#DC2626', marginBottom: 4 }}>🔒 Bidding opens when the auctioneer goes live</Text>
+          {liveScheduleInfo?.scheduled_at && (
+            <Text style={{ color: muted, fontSize: 12 }}>
+              📅 {new Date(liveScheduleInfo.scheduled_at).toLocaleDateString('en-ZA', { day: 'numeric', month: 'long' })} at {new Date(liveScheduleInfo.scheduled_at).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })}
+            </Text>
+          )}
+        </View>
+      )}
+      {!isAuctioneer && !isClosed && !liveNotStarted && (
         <View style={[s.footer, { backgroundColor: card, borderTopColor: border }]}>
           {isTopBidder ? (
             <View style={s.topBidderFooter}>
