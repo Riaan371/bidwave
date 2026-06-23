@@ -36,7 +36,7 @@ serve(async (req) => {
       body: JSON.stringify({
         app_id: ONESIGNAL_APP_ID,
         target_channel: 'push',
-        include_aliases: { external_id: [userId] },
+        included_segments: ['Total Subscriptions'],
         headings: { en: '🔔 Test Notification' },
         contents: { en: 'Push notifications are working on West Coast Pickers!' },
         url: 'https://bidwave.pages.dev',
@@ -45,7 +45,7 @@ serve(async (req) => {
     });
 
     const result = await response.json();
-    return new Response(JSON.stringify({ ...result, targeted_user_id: userId }), { status: 200, headers: { ...CORS, 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ ...result, sent_by_user_id: userId }), { status: 200, headers: { ...CORS, 'Content-Type': 'application/json' } });
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: CORS });
   }
