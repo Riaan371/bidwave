@@ -18,16 +18,12 @@ function TestPushButton() {
     try {
       const { data, error } = await supabase.functions.invoke('test-push');
       if (error) throw error;
-      if (data?.errors) {
-        setMsg(`⚠️ ${JSON.stringify(data.errors)}`);
-      } else {
-        setMsg(`✅ Sent to ${data?.recipients ?? 0} subscriber(s)`);
-      }
+      // DEBUG: show full raw response so we can see exactly what OneSignal returned
+      setMsg(JSON.stringify(data));
     } catch (e: any) {
       setMsg(`❌ ${e.message}`);
     } finally {
       setSending(false);
-      setTimeout(() => setMsg(''), 6000);
     }
   };
 
