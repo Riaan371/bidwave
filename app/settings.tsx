@@ -1,15 +1,18 @@
-import { View, Text, Pressable, Switch, StyleSheet } from 'react-native';
+import { View, Text, Pressable, Switch, StyleSheet, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, router } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { useAppTheme, Colors } from '../lib/theme';
 import { useThemeStore } from '../lib/theme-store';
 import { getNotificationPermission, requestNotificationPermission } from '../lib/onesignal';
+import { supabase } from '../lib/supabase';
 
 export default function Settings() {
   const { bg, card, border, ink, muted } = useAppTheme();
   const { theme, toggle } = useThemeStore();
   const [notifPerm, setNotifPerm] = useState('default');
+  const [sending, setSending] = useState(false);
+  const [testMsg, setTestMsg] = useState('');
 
   useEffect(() => {
     getNotificationPermission().then(setNotifPerm);
@@ -18,6 +21,20 @@ export default function Settings() {
   const enableNotifs = async () => {
     const granted = await requestNotificationPermission();
     setNotifPerm(granted ? 'granted' : await getNotificationPermission());
+  };
+
+  const sendTestPush = async () => {
+    setSending(true);
+    setTestMsg('');
+    try {
+      const { data, error } = await supabase.functions.invoke('test-push');
+      if (error) throw error;
+      setTestMsg(JSON.stringify(data));
+    } catch (e: any) {
+      setTestMsg(`❌ ${e.message}`);
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -50,6 +67,13 @@ export default function Settings() {
             </Pressable>
           )}
         </View>
+
+        <Pressable onPress={sendTestPush} disabled={sending} style={[s.row, { backgroundColor: '#7C3AED', marginBottom: 12, opacity: sending ? 0.7 : 1 }]}>
+          {sending ? <ActivityIndicator color="#fff" /> : <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>🔔 Send Test Push Notification</Text>}
+        </Pressable>
+        {testMsg !== '' && (
+          <Text style={{ color: testMsg.startsWith('❌') ? '#DC2626' : '#6B7280', fontSize: 11, marginBottom: 12, textAlign: 'center' }}>{testMsg}</Text>
+        )}
 
         <View style={[s.row, { backgroundColor: card, borderColor: border }]}>
           <View style={{ flex: 1 }}>

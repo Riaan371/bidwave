@@ -8,37 +8,6 @@ import { useThemeStore } from '../../lib/theme-store';
 import { supabase } from '../../lib/supabase';
 import { Colors } from '../../lib/theme';
 
-function TestPushButton() {
-  const [sending, setSending] = useState(false);
-  const [msg, setMsg] = useState('');
-
-  const sendTest = async () => {
-    setSending(true);
-    setMsg('');
-    try {
-      const { data, error } = await supabase.functions.invoke('test-push');
-      if (error) throw error;
-      // DEBUG: show full raw response so we can see exactly what OneSignal returned
-      setMsg(JSON.stringify(data));
-    } catch (e: any) {
-      setMsg(`❌ ${e.message}`);
-    } finally {
-      setSending(false);
-    }
-  };
-
-  return (
-    <View style={{ marginBottom: 12 }}>
-      <Pressable onPress={sendTest} disabled={sending} style={[s.btn, { backgroundColor: '#7C3AED', opacity: sending ? 0.6 : 1 }]}>
-        <Text style={[s.btnText, { color: '#fff' }]}>{sending ? 'Sending...' : '🔔 Send Test Push Notification'}</Text>
-      </Pressable>
-      {msg !== '' && (
-        <Text style={{ color: msg.startsWith('✅') ? '#16A34A' : '#DC2626', fontSize: 12, fontWeight: '600', marginTop: 6, textAlign: 'center' }}>{msg}</Text>
-      )}
-    </View>
-  );
-}
-
 function confirmAsync(title: string, message: string): Promise<boolean> {
   return new Promise((resolve) => {
     if (typeof window !== 'undefined' && typeof window.confirm === 'function') {
@@ -53,7 +22,7 @@ function confirmAsync(title: string, message: string): Promise<boolean> {
 }
 
 function ActiveLotsPanel({ userId, ink, muted, card, border }: { userId: string; ink: string; muted: string; card: string; border: string }) {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: lots, isLoading } = useQuery({
@@ -106,15 +75,15 @@ function ActiveLotsPanel({ userId, ink, muted, card, border }: { userId: string;
   if (!lots || lots.length === 0) return null;
 
   return (
-    <View style={[{ borderWidth: 1, borderRadius: 14, marginTop: 12 }, { borderColor: border, backgroundColor: card }]}>
+    <View style={{ marginBottom: 10 }}>
       <Pressable onPress={() => setExpanded(v => !v)}
-        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14 }}>
-        <Text style={{ color: ink, fontWeight: '700', fontSize: 14 }}>🔨 My Lots ({lots.length})</Text>
-        <Text style={{ color: muted, fontSize: 14 }}>{expanded ? '▲' : '▼'}</Text>
+        style={[s.btn, { backgroundColor: Colors.navy, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }]}>
+        <Text style={[s.btnText, { color: '#fff' }]}>🔨 My Lots ({lots.length})</Text>
+        <Text style={{ color: '#fff', fontSize: 13, marginLeft: 8 }}>{expanded ? '▲' : '▼'}</Text>
       </Pressable>
 
       {expanded && (
-        <View style={{ paddingHorizontal: 12, paddingBottom: 12 }}>
+        <View style={[{ borderWidth: 1, borderRadius: 14, marginTop: 8, padding: 12 }, { borderColor: border, backgroundColor: card }]}>
           {isLoading && <ActivityIndicator color={Colors.gold} style={{ marginBottom: 12 }} />}
 
           {Object.entries(groups).map(([aid, group]) => (
@@ -191,6 +160,24 @@ function ActiveLotsPanel({ userId, ink, muted, card, border }: { userId: string;
             style={{ marginTop: 4, padding: 10, borderRadius: 10, borderWidth: 1, borderColor: Colors.gold, alignItems: 'center' }}>
             <Text style={{ color: Colors.gold, fontWeight: '700', fontSize: 13 }}>Open Manage Lots →</Text>
           </Pressable>
+        </View>
+      )}
+    </View>
+  );
+}
+
+function ExportReportMenuItem({ ink, muted, card, border }: { ink: string; muted: string; card: string; border: string }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <View style={{ marginBottom: 10 }}>
+      <Pressable onPress={() => setExpanded(v => !v)}
+        style={[s.btn, { backgroundColor: '#16A34A', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }]}>
+        <Text style={[s.btnText, { color: '#fff' }]}>📊 Export Sales Report</Text>
+        <Text style={{ color: '#fff', fontSize: 13, marginLeft: 8 }}>{expanded ? '▲' : '▼'}</Text>
+      </Pressable>
+      {expanded && (
+        <View style={{ marginTop: 8 }}>
+          <ExportReport ink={ink} muted={muted} card={card} border={border} />
         </View>
       )}
     </View>
@@ -342,11 +329,9 @@ function AuctioneerPanel({ userId, ink, muted, card, border }: { userId: string;
         <Text style={[s.btnText, { color: Colors.navy }]}>🔴 Schedule / Go Live</Text>
       </Pressable>
 
-      <TestPushButton />
-
       <ActiveLotsPanel userId={userId} ink={ink} muted={muted} card={card} border={border} />
 
-      <ExportReport ink={ink} muted={muted} card={card} border={border} />
+      <ExportReportMenuItem ink={ink} muted={muted} card={card} border={border} />
 
       {sessions && sessions.length > 0 && (
         <View style={[{ borderWidth: 1, borderRadius: 14, padding: 14, marginTop: 4 }, { borderColor: border, backgroundColor: card }]}>
