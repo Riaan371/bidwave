@@ -1,4 +1,4 @@
-import { View, Text, Pressable, ActivityIndicator, Alert, Platform, StyleSheet, Image } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, Alert, Platform, StyleSheet, Image, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -45,6 +45,18 @@ export default function LiveRoom() {
 
   const sessionIsLive = sessionInfo?.status === 'live';
   const canAccess = isHost || sessionIsLive;
+
+  // Preview lots (photos + starting bid only) shown while waiting for the live session to start
+  const { data: previewLots } = useQuery({
+    queryKey: ['live-preview-lots', auctionId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('lots').select('id, title, photos, starting_bid, category')
+        .eq('auction_id', auctionId).order('created_at');
+      return data ?? [];
+    },
+    enabled: !canAccess,
+  });
 
   const { data: liveSession } = useQuery({
     queryKey: ['live-session-detail', auctionId],
@@ -208,24 +220,47 @@ export default function LiveRoom() {
       ) }} />
 
       {!canAccess ? (
-        <View style={[s.body, { justifyContent: 'center', alignItems: 'center' }]}>
-          <Text style={{ fontSize: 56, marginBottom: 16 }}>🔒</Text>
-          <Text style={{ color: '#fff', fontSize: 20, fontWeight: '800', marginBottom: 10, textAlign: 'center' }}>
-            Live Event Not Started Yet
-          </Text>
-          <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 15, textAlign: 'center', lineHeight: 22, marginBottom: 4 }}>
-            This live auction opens when the auctioneer starts the session.
-          </Text>
-          {sessionInfo?.scheduled_at && (
-            <Text style={{ color: Colors.gold, fontSize: 16, fontWeight: '700', marginTop: 12, textAlign: 'center' }}>
-              📅 {new Date(sessionInfo.scheduled_at).toLocaleDateString('en-ZA', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}{'\n'}
-              🕙 {new Date(sessionInfo.scheduled_at).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })}
+        <ScrollView style={s.body} contentContainerStyle={{ paddingBottom: 40 }}>
+          <View style={s.waitBanner}>
+            <Text style={{ fontSize: 36, marginBottom: 8 }}>🔒</Text>
+            <Text style={{ color: '#fff', fontSize: 18, fontWeight: '800', marginBottom: 8, textAlign: 'center' }}>
+              Bidding Opens When Live
             </Text>
-          )}
-          <Pressable onPress={() => router.push('/(tabs)/')} style={[s.outlineBtn, { marginTop: 28, width: '100%' }]}>
+            <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, textAlign: 'center', lineHeight: 19 }}>
+              Browse the lots below. Bidding unlocks once the auctioneer starts the session.
+            </Text>
+            {sessionInfo?.scheduled_at && (
+              <Text style={{ color: Colors.gold, fontSize: 15, fontWeight: '700', marginTop: 10, textAlign: 'center' }}>
+                📅 {new Date(sessionInfo.scheduled_at).toLocaleDateString('en-ZA', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}{'\n'}
+                🕙 {new Date(sessionInfo.scheduled_at).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })}
+              </Text>
+            )}
+          </View>
+
+          {(previewLots ?? []).map((lot: any) => (
+            <View key={lot.id} style={s.previewLotCard}>
+              {lot.photos?.[0] ? (
+                <Image source={{ uri: lot.photos[0] }} style={s.previewLotImg} resizeMode="cover" />
+              ) : (
+                <View style={[s.previewLotImg, { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.05)' }]}>
+                  <Text style={{ fontSize: 28 }}>📷</Text>
+                </View>
+              )}
+              <View style={{ flex: 1, padding: 12, opacity: 0.55 }}>
+                <Text style={s.previewLotCat}>{lot.category ?? '—'}</Text>
+                <Text style={s.previewLotTitle} numberOfLines={2}>{lot.title}</Text>
+                <Text style={s.previewLotBid}>Opening Bid: {formatZAR(lot.starting_bid)}</Text>
+                <View style={s.previewLockedBadge}>
+                  <Text style={s.previewLockedTxt}>🔒 Locked until live</Text>
+                </View>
+              </View>
+            </View>
+          ))}
+
+          <Pressable onPress={() => router.push('/(tabs)/')} style={[s.outlineBtn, { marginTop: 12 }]}>
             <Text style={s.outlineBtnTxt}>← Back to Home</Text>
           </Pressable>
-        </View>
+        </ScrollView>
       ) : (
       <View style={s.body}>
         {/* Live indicator */}
@@ -373,4 +408,12 @@ const s = StyleSheet.create({
   outlineBtn: { borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', borderRadius: 18, paddingVertical: 16, alignItems: 'center' },
   outlineBtnTxt: { color: 'rgba(255,255,255,0.8)', fontWeight: '700', fontSize: 15 },
   setupNote: { marginTop: 28, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 14, padding: 14 },
+  waitBanner: { backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 16, padding: 18, alignItems: 'center', marginBottom: 18 },
+  previewLotCard: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 14, overflow: 'hidden', marginBottom: 12 },
+  previewLotImg: { width: 100, height: 100 },
+  previewLotCat: { color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: '700', letterSpacing: 0.5, marginBottom: 2 },
+  previewLotTitle: { color: '#fff', fontSize: 14, fontWeight: '700', marginBottom: 6 },
+  previewLotBid: { color: Colors.gold, fontSize: 13, fontWeight: '700' },
+  previewLockedBadge: { backgroundColor: 'rgba(220,38,38,0.15)', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start', marginTop: 6 },
+  previewLockedTxt: { color: '#f87171', fontSize: 10, fontWeight: '700' },
 });
