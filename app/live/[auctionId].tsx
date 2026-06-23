@@ -31,6 +31,21 @@ export default function LiveRoom() {
 
   const [lotIndex, setLotIndex] = useState(0);
 
+  // Track the session's real status (scheduled/live/ended) regardless — used to gate bidder access
+  const { data: sessionInfo } = useQuery({
+    queryKey: ['live-session-status', auctionId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('live_sessions').select('status, scheduled_at, title')
+        .eq('auction_id', auctionId).maybeSingle();
+      return data;
+    },
+    refetchInterval: 5000,
+  });
+
+  const sessionIsLive = sessionInfo?.status === 'live';
+  const canAccess = isHost || sessionIsLive;
+
   const { data: liveSession } = useQuery({
     queryKey: ['live-session-detail', auctionId],
     queryFn: async () => {
@@ -39,6 +54,7 @@ export default function LiveRoom() {
         .eq('auction_id', auctionId).eq('status', 'live').maybeSingle();
       return data;
     },
+    enabled: canAccess,
     refetchInterval: 3000,
     onSuccess: (data) => { if (data?.current_lot_index != null) setLotIndex(data.current_lot_index); },
   });
@@ -58,6 +74,7 @@ export default function LiveRoom() {
         .order('created_at').limit(1).maybeSingle();
       return data;
     },
+    enabled: canAccess,
     refetchInterval: 4000,
   });
 
@@ -74,7 +91,7 @@ export default function LiveRoom() {
         .maybeSingle();
       return data as { amount: number; users: { screen_name: string | null; full_name: string } | null } | null;
     },
-    enabled: !!activeLotId,
+    enabled: !!activeLotId && canAccess,
     refetchInterval: 3000,
   });
 
@@ -190,6 +207,26 @@ export default function LiveRoom() {
         </Pressable>
       ) }} />
 
+      {!canAccess ? (
+        <View style={[s.body, { justifyContent: 'center', alignItems: 'center' }]}>
+          <Text style={{ fontSize: 56, marginBottom: 16 }}>🔒</Text>
+          <Text style={{ color: '#fff', fontSize: 20, fontWeight: '800', marginBottom: 10, textAlign: 'center' }}>
+            Live Event Not Started Yet
+          </Text>
+          <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 15, textAlign: 'center', lineHeight: 22, marginBottom: 4 }}>
+            This live auction opens when the auctioneer starts the session.
+          </Text>
+          {sessionInfo?.scheduled_at && (
+            <Text style={{ color: Colors.gold, fontSize: 16, fontWeight: '700', marginTop: 12, textAlign: 'center' }}>
+              📅 {new Date(sessionInfo.scheduled_at).toLocaleDateString('en-ZA', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}{'\n'}
+              🕙 {new Date(sessionInfo.scheduled_at).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })}
+            </Text>
+          )}
+          <Pressable onPress={() => router.push('/(tabs)/')} style={[s.outlineBtn, { marginTop: 28, width: '100%' }]}>
+            <Text style={s.outlineBtnTxt}>← Back to Home</Text>
+          </Pressable>
+        </View>
+      ) : (
       <View style={s.body}>
         {/* Live indicator */}
         <View style={s.liveRow}>
@@ -303,6 +340,7 @@ export default function LiveRoom() {
           </Pressable>
         )}
       </View>
+      )}
     </SafeAreaView>
   );
 }
