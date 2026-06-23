@@ -8,6 +8,41 @@ import { useThemeStore } from '../../lib/theme-store';
 import { supabase } from '../../lib/supabase';
 import { Colors } from '../../lib/theme';
 
+function TestPushButton() {
+  const [sending, setSending] = useState(false);
+  const [msg, setMsg] = useState('');
+
+  const sendTest = async () => {
+    setSending(true);
+    setMsg('');
+    try {
+      const { data, error } = await supabase.functions.invoke('test-push');
+      if (error) throw error;
+      if (data?.errors) {
+        setMsg(`⚠️ ${JSON.stringify(data.errors)}`);
+      } else {
+        setMsg(`✅ Sent to ${data?.recipients ?? 0} subscriber(s)`);
+      }
+    } catch (e: any) {
+      setMsg(`❌ ${e.message}`);
+    } finally {
+      setSending(false);
+      setTimeout(() => setMsg(''), 6000);
+    }
+  };
+
+  return (
+    <View style={{ marginBottom: 12 }}>
+      <Pressable onPress={sendTest} disabled={sending} style={[s.btn, { backgroundColor: '#7C3AED', opacity: sending ? 0.6 : 1 }]}>
+        <Text style={[s.btnText, { color: '#fff' }]}>{sending ? 'Sending...' : '🔔 Send Test Push Notification'}</Text>
+      </Pressable>
+      {msg !== '' && (
+        <Text style={{ color: msg.startsWith('✅') ? '#16A34A' : '#DC2626', fontSize: 12, fontWeight: '600', marginTop: 6, textAlign: 'center' }}>{msg}</Text>
+      )}
+    </View>
+  );
+}
+
 function ActiveLotsPanel({ userId, ink, muted, card, border }: { userId: string; ink: string; muted: string; card: string; border: string }) {
   const [expanded, setExpanded] = useState(true);
 
@@ -262,6 +297,8 @@ function AuctioneerPanel({ userId, ink, muted, card, border }: { userId: string;
         <Text style={[s.btnText, { color: Colors.navy }]}>🔴 Schedule / Go Live</Text>
       </Pressable>
 
+      <TestPushButton />
+
       <ActiveLotsPanel userId={userId} ink={ink} muted={muted} card={card} border={border} />
 
       <ExportReport ink={ink} muted={muted} card={card} border={border} />
@@ -406,6 +443,9 @@ export default function Profile() {
           <Text style={s.bannerName}>{profile.full_name}</Text>
           <Text style={s.bannerEmail}>{profile.email}</Text>
         </View>
+        <Pressable onPress={() => router.push('/settings')} style={s.gearBtn}>
+          <Text style={{ fontSize: 22 }}>⚙️</Text>
+        </Pressable>
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
@@ -460,6 +500,7 @@ const s = StyleSheet.create({
   // Profile banner
   profileBanner: { backgroundColor: Colors.navy, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, gap: 12 },
   bannerLogo: { width: 44, height: 44 },
+  gearBtn: { padding: 6 },
   bannerName: { color: '#fff', fontSize: 16, fontWeight: '700' },
   bannerEmail: { color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 2 },
 
