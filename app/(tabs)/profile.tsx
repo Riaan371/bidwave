@@ -43,8 +43,22 @@ function TestPushButton() {
   );
 }
 
+function confirmAsync(title: string, message: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (typeof window !== 'undefined' && typeof window.confirm === 'function') {
+      resolve(window.confirm(`${title}\n\n${message}`));
+    } else {
+      Alert.alert(title, message, [
+        { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+        { text: 'Delete', style: 'destructive', onPress: () => resolve(true) },
+      ]);
+    }
+  });
+}
+
 function ActiveLotsPanel({ userId, ink, muted, card, border }: { userId: string; ink: string; muted: string; card: string; border: string }) {
   const [expanded, setExpanded] = useState(true);
+  const queryClient = useQueryClient();
 
   const { data: lots, isLoading } = useQuery({
     queryKey: ['profile-lots', userId],
@@ -57,6 +71,30 @@ function ActiveLotsPanel({ userId, ink, muted, card, border }: { userId: string;
       return data ?? [];
     },
   });
+
+  const refreshAll = () => {
+    queryClient.invalidateQueries({ queryKey: ['profile-lots'] });
+    queryClient.invalidateQueries({ queryKey: ['auctioneer-lots'] });
+    queryClient.invalidateQueries({ queryKey: ['auction-events'] });
+  };
+
+  const deleteLot = async (lotId: string, title: string) => {
+    const ok = await confirmAsync('Delete Lot', `Are you sure you want to delete "${title}"? This cannot be undone.`);
+    if (!ok) return;
+    const { error } = await supabase.from('lots').delete().eq('id', lotId);
+    if (error) { Alert.alert('Error', error.message); return; }
+    refreshAll();
+  };
+
+  const deleteAuctionGroup = async (auctionId: string, title: string) => {
+    const ok = await confirmAsync('Delete Auction', `Delete "${title}"? Lots will be returned to your inventory (unpublished), and the auction will be removed.`);
+    if (!ok) return;
+    await supabase.from('lots').update({ auction_id: null }).eq('auction_id', auctionId);
+    await supabase.from('live_sessions').delete().eq('auction_id', auctionId);
+    const { error } = await supabase.from('auctions').delete().eq('id', auctionId);
+    if (error) { Alert.alert('Error', error.message); return; }
+    refreshAll();
+  };
 
   const inAuction = (lots ?? []).filter((l: any) => !!l.auction_id);
   const inventory = (lots ?? []).filter((l: any) => !l.auction_id);
@@ -87,9 +125,12 @@ function ActiveLotsPanel({ userId, ink, muted, card, border }: { userId: string;
             <View key={aid} style={{ marginBottom: 10 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
                 <Text style={{ color: Colors.gold, fontWeight: '700', fontSize: 12, flex: 1 }}>📦 {group.title}</Text>
-                <View style={{ backgroundColor: group.status === 'active' ? '#16A34A' : '#6B7280', borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2 }}>
+                <View style={{ backgroundColor: group.status === 'active' ? '#16A34A' : '#6B7280', borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2, marginRight: 6 }}>
                   <Text style={{ color: '#fff', fontSize: 9, fontWeight: '700' }}>{group.status.toUpperCase()}</Text>
                 </View>
+                <Pressable onPress={() => deleteAuctionGroup(aid, group.title)} style={{ backgroundColor: '#FEE2E2', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
+                  <Text style={{ color: '#DC2626', fontSize: 11, fontWeight: '700' }}>🗑 Delete Auction</Text>
+                </Pressable>
               </View>
               {group.lots.map((lot: any) => (
                 <View key={lot.id} style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: border, borderRadius: 10, padding: 8, marginBottom: 6, backgroundColor: 'rgba(0,0,0,0.02)' }}>
@@ -109,6 +150,10 @@ function ActiveLotsPanel({ userId, ink, muted, card, border }: { userId: string;
                   <Pressable onPress={() => router.push('/manage-lots')}
                     style={{ backgroundColor: Colors.navy, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, marginLeft: 8 }}>
                     <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>✏️ Edit</Text>
+                  </Pressable>
+                  <Pressable onPress={() => deleteLot(lot.id, lot.title)}
+                    style={{ backgroundColor: '#FEE2E2', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, marginLeft: 6 }}>
+                    <Text style={{ color: '#DC2626', fontSize: 12, fontWeight: '700' }}>🗑</Text>
                   </Pressable>
                 </View>
               ))}
@@ -136,6 +181,10 @@ function ActiveLotsPanel({ userId, ink, muted, card, border }: { userId: string;
                   <Pressable onPress={() => router.push('/manage-lots')}
                     style={{ backgroundColor: Colors.navy, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, marginLeft: 8 }}>
                     <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>✏️ Edit</Text>
+                  </Pressable>
+                  <Pressable onPress={() => deleteLot(lot.id, lot.title)}
+                    style={{ backgroundColor: '#FEE2E2', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, marginLeft: 6 }}>
+                    <Text style={{ color: '#DC2626', fontSize: 12, fontWeight: '700' }}>🗑</Text>
                   </Pressable>
                 </View>
               ))}
