@@ -25,7 +25,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
     const { data } = await supabase
       .from('users')
-      .select('*')
+      .select('id, email, role, full_name, screen_name, kyc_status, created_at')
       .eq('id', session.user.id)
       .maybeSingle();
     set({ profile: data as AppUser | null, initialized: true });
