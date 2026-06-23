@@ -19,3 +19,22 @@ export function initOneSignal() {
     });
   });
 }
+
+// Returns 'granted' | 'denied' | 'default'
+export async function getNotificationPermission(): Promise<string> {
+  if (typeof window === 'undefined' || !('Notification' in window)) return 'denied';
+  return Notification.permission;
+}
+
+// Triggers the real native browser permission prompt (must be called from a user gesture, e.g. onPress)
+export async function requestNotificationPermission(): Promise<boolean> {
+  if (typeof window === 'undefined') return false;
+  const OneSignal = (window as any).OneSignal;
+  if (!OneSignal) return false;
+  try {
+    await OneSignal.Notifications.requestPermission();
+    return Notification.permission === 'granted';
+  } catch {
+    return false;
+  }
+}

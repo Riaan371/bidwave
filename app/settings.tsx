@@ -1,12 +1,24 @@
 import { View, Text, Pressable, Switch, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, router } from 'expo-router';
+import { useState, useEffect } from 'react';
 import { useAppTheme, Colors } from '../lib/theme';
 import { useThemeStore } from '../lib/theme-store';
+import { getNotificationPermission, requestNotificationPermission } from '../lib/onesignal';
 
 export default function Settings() {
   const { bg, card, border, ink, muted } = useAppTheme();
   const { theme, toggle } = useThemeStore();
+  const [notifPerm, setNotifPerm] = useState('default');
+
+  useEffect(() => {
+    getNotificationPermission().then(setNotifPerm);
+  }, []);
+
+  const enableNotifs = async () => {
+    const granted = await requestNotificationPermission();
+    setNotifPerm(granted ? 'granted' : await getNotificationPermission());
+  };
 
   return (
     <SafeAreaView style={[s.root, { backgroundColor: bg }]}>
@@ -23,6 +35,22 @@ export default function Settings() {
       }} />
 
       <View style={{ padding: 16 }}>
+        <View style={[s.row, { backgroundColor: card, borderColor: border, marginBottom: 12 }]}>
+          <View style={{ flex: 1 }}>
+            <Text style={[s.label, { color: ink }]}>Push Notifications</Text>
+            <Text style={[s.sub, { color: muted }]}>
+              {notifPerm === 'granted' ? '✅ Enabled — you\'ll get auction alerts' :
+               notifPerm === 'denied' ? '🚫 Blocked — enable in browser site settings' :
+               'Get notified about new and live auctions'}
+            </Text>
+          </View>
+          {notifPerm === 'default' && (
+            <Pressable onPress={enableNotifs} style={{ backgroundColor: Colors.gold, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 }}>
+              <Text style={{ color: Colors.navy, fontWeight: '700', fontSize: 13 }}>Enable</Text>
+            </Pressable>
+          )}
+        </View>
+
         <View style={[s.row, { backgroundColor: card, borderColor: border }]}>
           <View style={{ flex: 1 }}>
             <Text style={[s.label, { color: ink }]}>Dark mode</Text>

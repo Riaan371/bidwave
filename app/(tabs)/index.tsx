@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../lib/auth-store';
 import { useAppTheme, Colors } from '../../lib/theme';
+import { requestNotificationPermission, getNotificationPermission } from '../../lib/onesignal';
 
 const { width: SW } = Dimensions.get('window');
 const CARD_W = SW > 600 ? 320 : SW * 0.78;
@@ -155,6 +156,30 @@ export default function Home() {
   const [installPrompt, setInstallPrompt] = useState<any>(null);
   const [showInstall, setShowInstall] = useState(false);
   const [showIOSGuide, setShowIOSGuide] = useState(false);
+  const [showNotifAsk, setShowNotifAsk] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    let cancelled = false;
+    (async () => {
+      const perm = await getNotificationPermission();
+      const dismissed = window.localStorage.getItem('wcp-notif-dismissed');
+      if (!cancelled && perm === 'default' && !dismissed) {
+        setTimeout(() => setShowNotifAsk(true), 2500);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleEnableNotifications = async () => {
+    setShowNotifAsk(false);
+    await requestNotificationPermission();
+  };
+
+  const handleDismissNotifAsk = () => {
+    setShowNotifAsk(false);
+    if (typeof window !== 'undefined') window.localStorage.setItem('wcp-notif-dismissed', '1');
+  };
   const isIOS = typeof navigator !== 'undefined' && /iphone|ipad|ipod/i.test(navigator.userAgent);
   // Detect if already running as installed PWA (works on both iOS and Android/Chrome)
   const isInStandalone = typeof window !== 'undefined' && (
@@ -228,6 +253,25 @@ export default function Home() {
             <Pressable onPress={handleInstall} style={s.installBtn}>
               <Text style={s.installBtnTxt}>Install</Text>
             </Pressable>
+          </View>
+        )}
+
+        {/* Soft-ask: explain value before triggering the real browser permission prompt */}
+        {showNotifAsk && (
+          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 999, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+            <View style={{ backgroundColor: '#fff', borderRadius: 20, padding: 24, width: '100%', maxWidth: 360, alignItems: 'center' }}>
+              <Text style={{ fontSize: 40, marginBottom: 8 }}>🔔</Text>
+              <Text style={{ fontSize: 18, fontWeight: '800', color: Colors.navy, marginBottom: 8, textAlign: 'center' }}>Never miss an auction</Text>
+              <Text style={{ color: '#374151', fontSize: 14, lineHeight: 20, marginBottom: 20, textAlign: 'center' }}>
+                Get notified the moment a new auction opens or a live event starts — so you never lose out on a bid.
+              </Text>
+              <Pressable onPress={handleEnableNotifications} style={{ backgroundColor: Colors.gold, borderRadius: 10, padding: 14, alignItems: 'center', width: '100%', marginBottom: 10 }}>
+                <Text style={{ color: Colors.navy, fontWeight: '800' }}>Enable Notifications</Text>
+              </Pressable>
+              <Pressable onPress={handleDismissNotifAsk} style={{ padding: 8 }}>
+                <Text style={{ color: '#9CA3AF', fontSize: 13 }}>Not now</Text>
+              </Pressable>
+            </View>
           </View>
         )}
 
