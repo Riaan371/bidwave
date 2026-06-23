@@ -348,6 +348,7 @@ function SessionLotNames({ lotIds, ink, muted }: { lotIds: string[]; ink: string
 }
 
 function AuctioneerPanel({ userId, ink, muted, card, border }: { userId: string; ink: string; muted: string; card: string; border: string }) {
+  const [sessionsExpanded, setSessionsExpanded] = useState(false);
   const queryClient = useQueryClient();
 
   const goLive = async (auctionId: string) => {
@@ -394,33 +395,42 @@ function AuctioneerPanel({ userId, ink, muted, card, border }: { userId: string;
       <ExportReportMenuItem ink={ink} muted={muted} card={card} border={border} />
 
       {sessions && sessions.length > 0 && (
-        <View style={[{ borderWidth: 1, borderRadius: 14, padding: 14, marginTop: 4 }, { borderColor: border, backgroundColor: card }]}>
-          <Text style={{ color: ink, fontWeight: '700', fontSize: 14, marginBottom: 10 }}>Scheduled Sessions</Text>
-          {sessions.map((s2) => {
-            const dt = s2.scheduled_at ? new Date(s2.scheduled_at) : null;
-            const dateStr = dt ? dt.toLocaleDateString('en-ZA', { weekday: 'short', day: 'numeric', month: 'short' }) + ' at ' + dt.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' }) : 'Live now';
-            return (
-              <View key={s2.id} style={{ borderWidth: 1, borderColor: border, borderRadius: 10, padding: 10, marginBottom: 10 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: ink, fontWeight: '700', fontSize: 14 }}>{s2.title ?? 'Untitled'}</Text>
-                    <Text style={{ color: Colors.gold, fontSize: 12, fontWeight: '600', marginTop: 2 }}>📅 {dateStr}</Text>
+        <View style={{ marginTop: 4 }}>
+          <Pressable onPress={() => setSessionsExpanded(v => !v)}
+            style={[s.btn, { backgroundColor: Colors.gold, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }]}>
+            <Text style={[s.btnText, { color: Colors.navy }]}>📅 Scheduled Sessions ({sessions.length})</Text>
+            <Text style={{ color: Colors.navy, fontSize: 13, marginLeft: 8 }}>{sessionsExpanded ? '▲' : '▼'}</Text>
+          </Pressable>
+
+          {sessionsExpanded && (
+            <View style={[{ borderWidth: 1, borderRadius: 14, marginTop: 8, padding: 14 }, { borderColor: border, backgroundColor: card }]}>
+              {sessions.map((s2) => {
+                const dt = s2.scheduled_at ? new Date(s2.scheduled_at) : null;
+                const dateStr = dt ? dt.toLocaleDateString('en-ZA', { weekday: 'short', day: 'numeric', month: 'short' }) + ' at ' + dt.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' }) : 'Live now';
+                return (
+                  <View key={s2.id} style={{ borderWidth: 1, borderColor: border, borderRadius: 10, padding: 10, marginBottom: 10 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: ink, fontWeight: '700', fontSize: 14 }}>{s2.title ?? 'Untitled'}</Text>
+                        <Text style={{ color: Colors.gold, fontSize: 12, fontWeight: '600', marginTop: 2 }}>📅 {dateStr}</Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', gap: 6, marginLeft: 8 }}>
+                        <Pressable onPress={() => goLive(s2.auction_id)} style={{ paddingHorizontal: 10, paddingVertical: 5, backgroundColor: 'rgba(22,163,74,0.1)', borderRadius: 8 }}>
+                          <Text style={{ color: '#16A34A', fontWeight: '700', fontSize: 12 }}>▶ Go Live</Text>
+                        </Pressable>
+                        <Pressable onPress={() => deleteSession(s2.id)} style={{ paddingHorizontal: 10, paddingVertical: 5, backgroundColor: 'rgba(220,38,38,0.1)', borderRadius: 8 }}>
+                          <Text style={{ color: '#DC2626', fontWeight: '700', fontSize: 12 }}>Delete</Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                    {s2.lot_ids && s2.lot_ids.length > 0 && (
+                      <SessionLotNames lotIds={s2.lot_ids} ink={ink} muted={muted} />
+                    )}
                   </View>
-                  <View style={{ flexDirection: 'row', gap: 6, marginLeft: 8 }}>
-                    <Pressable onPress={() => goLive(s2.auction_id)} style={{ paddingHorizontal: 10, paddingVertical: 5, backgroundColor: 'rgba(22,163,74,0.1)', borderRadius: 8 }}>
-                      <Text style={{ color: '#16A34A', fontWeight: '700', fontSize: 12 }}>▶ Go Live</Text>
-                    </Pressable>
-                    <Pressable onPress={() => deleteSession(s2.id)} style={{ paddingHorizontal: 10, paddingVertical: 5, backgroundColor: 'rgba(220,38,38,0.1)', borderRadius: 8 }}>
-                      <Text style={{ color: '#DC2626', fontWeight: '700', fontSize: 12 }}>Delete</Text>
-                    </Pressable>
-                  </View>
-                </View>
-                {s2.lot_ids && s2.lot_ids.length > 0 && (
-                  <SessionLotNames lotIds={s2.lot_ids} ink={ink} muted={muted} />
-                )}
-              </View>
-            );
-          })}
+                );
+              })}
+            </View>
+          )}
         </View>
       )}
     </View>
