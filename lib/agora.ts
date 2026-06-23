@@ -27,16 +27,18 @@ export async function getAgoraToken(channel: string, role: 'publisher' | 'subscr
 }
 
 export async function markSessionLive(auctionId: string, userId: string) {
-  await supabase.from('live_sessions').upsert(
-    { auction_id: auctionId, auctioneer_id: userId, channel_name: auctionId, status: 'live', started_at: new Date().toISOString() },
+  const { error } = await supabase.from('live_sessions').upsert(
+    { auction_id: auctionId, auctioneer_id: userId, channel_name: auctionId, status: 'live' },
     { onConflict: 'auction_id' }
   );
+  if (error) throw new Error(`Failed to mark session live: ${error.message}`);
 }
 
 export async function markSessionEnded(auctionId: string) {
-  await supabase
+  const { error } = await supabase
     .from('live_sessions')
-    .update({ status: 'ended', ended_at: new Date().toISOString() })
+    .update({ status: 'ended' })
     .eq('auction_id', auctionId)
     .eq('status', 'live');
+  if (error) throw new Error(`Failed to end session: ${error.message}`);
 }
