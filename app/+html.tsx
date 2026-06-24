@@ -19,9 +19,9 @@ export default function Root({ children }: PropsWithChildren) {
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="WC Pickers" />
         <link rel="manifest" href="/manifest.json" />
-        <link rel="apple-touch-icon" href="/icon-192-v4.png" />
-        <link rel="icon" type="image/png" sizes="512x512" href="/icon-512-v4.png" />
-        <link rel="icon" type="image/png" sizes="192x192" href="/icon-192-v4.png" />
+        <link rel="apple-touch-icon" href="/icon-192-v5.png" />
+        <link rel="icon" type="image/png" sizes="512x512" href="/icon-512-v5.png" />
+        <link rel="icon" type="image/png" sizes="192x192" href="/icon-192-v5.png" />
 
         {/* OneSignal Web Push */}
         <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer />
