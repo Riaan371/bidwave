@@ -8,6 +8,13 @@ import { useThemeStore } from '../../lib/theme-store';
 import { supabase } from '../../lib/supabase';
 import { Colors } from '../../lib/theme';
 
+function storagePathFromUrl(url: string): string | null {
+  const marker = '/lot-photos/';
+  const idx = url.indexOf(marker);
+  if (idx === -1) return null;
+  return url.slice(idx + marker.length);
+}
+
 function confirmAsync(title: string, message: string): Promise<boolean> {
   return new Promise((resolve) => {
     if (typeof window !== 'undefined' && typeof window.confirm === 'function') {
@@ -64,6 +71,9 @@ function ActiveLotsPanel({ userId, ink, muted, card, border }: { userId: string;
   const deleteLot = async (lotId: string, title: string) => {
     const ok = await confirmAsync('Delete Lot', `Are you sure you want to delete "${title}"? This cannot be undone.`);
     if (!ok) return;
+    const lot = (lots ?? []).find((l: any) => l.id === lotId);
+    const paths = ((lot as any)?.photos ?? []).map(storagePathFromUrl).filter(Boolean) as string[];
+    if (paths.length > 0) await supabase.storage.from('lot-photos').remove(paths);
     const { error } = await supabase.from('lots').delete().eq('id', lotId);
     if (error) { Alert.alert('Error', error.message); return; }
     refreshAll();
@@ -73,6 +83,21 @@ function ActiveLotsPanel({ userId, ink, muted, card, border }: { userId: string;
     const ok = await confirmAsync('Delete Auction', `Delete "${title}"? Lots will be returned to your inventory (unpublished), and the auction will be removed.`);
     if (!ok) return;
     await supabase.from('lots').update({ auction_id: null }).eq('auction_id', auctionId);
+    await supabase.from('live_sessions').delete().eq('auction_id', auctionId);
+    const { error } = await supabase.from('auctions').delete().eq('id', auctionId);
+    if (error) { Alert.alert('Error', error.message); return; }
+    refreshAll();
+  };
+
+  // Completed auctions are done — "delete" here means permanently gone, not
+  // returned to inventory: deletes the lot rows, their photo files in
+  // storage, the live session, and the auction itself.
+  const deleteCompletedAuctionGroup = async (auctionId: string, title: string, groupLots: any[]) => {
+    const ok = await confirmAsync('Delete Completed Auction', `Permanently delete "${title}"? This deletes all its lots and photos. This cannot be undone.`);
+    if (!ok) return;
+    const paths = groupLots.flatMap((l: any) => (l.photos ?? []).map(storagePathFromUrl).filter(Boolean)) as string[];
+    if (paths.length > 0) await supabase.storage.from('lot-photos').remove(paths);
+    await supabase.from('lots').delete().eq('auction_id', auctionId);
     await supabase.from('live_sessions').delete().eq('auction_id', auctionId);
     const { error } = await supabase.from('auctions').delete().eq('id', auctionId);
     if (error) { Alert.alert('Error', error.message); return; }
@@ -117,7 +142,7 @@ function ActiveLotsPanel({ userId, ink, muted, card, border }: { userId: string;
   const activeGroupEntries = Object.entries(groups).filter(([, g]) => !closedStatuses.includes(g.status));
   const closedGroupEntries = Object.entries(groups).filter(([, g]) => closedStatuses.includes(g.status));
   const activeCount = activeGroupEntries.reduce((n, [, g]) => n + g.lots.length, 0) + inventory.length;
-  const completedCount = closedGroupEntries.reduce((n, [, g]) => n + g.lots.length, 0);
+  const completedCount = closedGroupEntries.length;
 
   if ((!lots || lots.length === 0) && closedGroupEntries.length === 0) return null;
 
@@ -235,13 +260,14 @@ function ActiveLotsPanel({ userId, ink, muted, card, border }: { userId: string;
                     <View style={{ backgroundColor: '#6B7280', borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2, marginRight: 6 }}>
                       <Text style={{ color: '#fff', fontSize: 9, fontWeight: '700' }}>{group.status.toUpperCase()}</Text>
                     </View>
-                    <Pressable onPress={() => deleteAuctionGroup(aid, group.title)} style={{ backgroundColor: '#FEE2E2', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
+                    <Pressable onPress={() => deleteCompletedAuctionGroup(aid, group.title, group.lots)} style={{ backgroundColor: '#FEE2E2', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
                       <Text style={{ color: '#DC2626', fontSize: 11, fontWeight: '700' }}>🗑 Delete Auction</Text>
                     </Pressable>
                   </View>
                   <Text style={{ color: muted, fontSize: 11, marginBottom: 6 }}>
                     {group.type === 'live' ? '🔴 Live' : group.type === 'timed' ? '⏱ Timed' : '—'}
                     {formatClosedAt(group.closedAt) ? ` · Closed ${formatClosedAt(group.closedAt)}` : ''}
+                    {` · ${group.lots.length} lot${group.lots.length === 1 ? '' : 's'}`}
                   </Text>
                   {group.lots.map((lot: any) => (
                     <View key={lot.id} style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: border, borderRadius: 10, padding: 8, marginBottom: 6, backgroundColor: 'rgba(0,0,0,0.02)' }}>
