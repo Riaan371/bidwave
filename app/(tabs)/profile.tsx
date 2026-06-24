@@ -538,6 +538,7 @@ export default function Profile() {
         <View style={s.guestRoot}>
           <Image source={require('../../assets/logo.png')} style={s.guestLogo} resizeMode="contain" />
           <Text style={s.guestBrand}>West Coast Picker</Text>
+          <Text style={s.guestOnline}>Online Auction</Text>
           <Text style={s.guestTagline}>South Africa's Live Auction Marketplace</Text>
 
           <View style={s.guestCard}>
@@ -617,6 +618,7 @@ const s = StyleSheet.create({
   guestRoot: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28 },
   guestLogo: { width: 100, height: 100, marginBottom: 14 },
   guestBrand: { color: '#fff', fontSize: 22, fontWeight: '800', letterSpacing: 0.3, marginBottom: 4 },
+  guestOnline: { color: Colors.gold, fontSize: 12, fontWeight: '700', letterSpacing: 0.6, marginBottom: 4 },
   guestTagline: { color: 'rgba(255,255,255,0.45)', fontSize: 12, marginBottom: 32 },
   guestCard: { width: '100%', backgroundColor: '#fff', borderRadius: 20, padding: 24 },
   guestHeading: { fontSize: 20, fontWeight: '800', color: Colors.navy, marginBottom: 6 },

@@ -8,6 +8,7 @@ export default function ChooseRole() {
       <View style={s.header}>
         <Image source={require('../../assets/logo.png')} style={s.logo} resizeMode="contain" />
         <Text style={s.brand}>West Coast Picker</Text>
+        <Text style={s.brandOnline}>Online Auction</Text>
       </View>
 
       <Text style={s.heading}>Create Your Account</Text>
@@ -40,6 +41,7 @@ const s = StyleSheet.create({
   header: { alignItems: 'center', marginBottom: 28 },
   logo: { width: 72, height: 72, marginBottom: 8 },
   brand: { color: '#fff', fontSize: 18, fontWeight: '800' },
+  brandOnline: { color: Colors.gold, fontSize: 11, fontWeight: '700', letterSpacing: 0.6, marginTop: 2 },
   heading: { fontSize: 22, fontWeight: '800', color: '#fff', marginBottom: 6 },
   sub: { fontSize: 14, color: 'rgba(255,255,255,0.5)', marginBottom: 24, lineHeight: 21 },
   card: { borderWidth: 1.5, borderRadius: 16, padding: 18, marginBottom: 12 },

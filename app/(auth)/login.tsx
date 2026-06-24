@@ -59,6 +59,7 @@ export default function Login() {
       <View style={s.logoWrap}>
         <Image source={require('../../assets/logo.png')} style={s.logo} resizeMode="contain" />
         <Text style={s.brand}>West Coast Picker</Text>
+        <Text style={s.brandOnline}>Online Auction</Text>
         <Text style={s.brandSub}>South Africa's Live Auction Marketplace</Text>
       </View>
 
@@ -100,6 +101,7 @@ const s = StyleSheet.create({
   logoWrap: { alignItems: 'center', marginBottom: 32 },
   logo: { width: 90, height: 90, marginBottom: 12 },
   brand: { color: '#fff', fontSize: 22, fontWeight: '800', letterSpacing: 0.3 },
+  brandOnline: { color: Colors.gold, fontSize: 12, fontWeight: '700', letterSpacing: 0.6, marginTop: 3 },
   brandSub: { color: 'rgba(255,255,255,0.45)', fontSize: 12, marginTop: 3 },
   card: { backgroundColor: '#fff', borderRadius: 20, padding: 24 },
   heading: { fontSize: 22, fontWeight: '800', color: Colors.navy, marginBottom: 4 },

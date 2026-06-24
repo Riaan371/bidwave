@@ -262,6 +262,7 @@ export default function Home() {
           <Image source={require('../../assets/logo.png')} style={s.logo} resizeMode="contain" />
           <View style={{ flex: 1, marginLeft: 12 }}>
             <Text style={s.headerTitle}>West Coast Picker</Text>
+            <Text style={s.headerOnline}>Online Auction</Text>
             <Text style={s.headerSub}>South Africa's Live Auction Marketplace</Text>
           </View>
           <Pressable onPress={refetch} style={s.refreshBtn}>
@@ -407,6 +408,7 @@ const s = StyleSheet.create({
   header: { backgroundColor: Colors.navy, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 },
   logo: { width: 52, height: 52 },
   headerTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: '800', letterSpacing: 0.2 },
+  headerOnline: { color: Colors.gold, fontSize: 11, fontWeight: '700', letterSpacing: 0.6, marginTop: 1 },
   headerSub: { color: 'rgba(255,255,255,0.55)', fontSize: 11, marginTop: 1 },
   refreshBtn: { padding: 8, borderRadius: 8, backgroundColor: 'rgba(196,154,34,0.15)' },
 

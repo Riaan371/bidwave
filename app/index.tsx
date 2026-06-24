@@ -38,7 +38,8 @@ export default function Welcome() {
       <View style={s.top}>
         <Image source={require('../assets/logo.png')} style={s.logo} resizeMode="contain" />
         <Text style={s.title}>West Coast Picker</Text>
-        <Text style={s.tagline}>South Africa's Live Auction Marketplace</Text>
+        <Text style={s.tagline}>Online Auction</Text>
+        <Text style={s.taglineSub}>South Africa's Live Auction Marketplace</Text>
         <View style={s.divider} />
         <Text style={s.sub}>Bid live on vehicles, livestock, plant & equipment, collectibles and more — from anywhere in South Africa.</Text>
 
@@ -92,6 +93,7 @@ const s = StyleSheet.create({
   logo: { width: 120, height: 120, marginBottom: 20 },
   title: { fontSize: 32, fontWeight: '800', color: '#fff', letterSpacing: 0.2, textAlign: 'center' },
   tagline: { fontSize: 13, color: Colors.gold, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginTop: 6, textAlign: 'center' },
+  taglineSub: { fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 4, textAlign: 'center' },
   divider: { width: 48, height: 2, backgroundColor: Colors.gold, borderRadius: 2, marginVertical: 20 },
   sub: { fontSize: 14, color: 'rgba(255,255,255,0.5)', textAlign: 'center', lineHeight: 22, maxWidth: 300 },
   installBtn: { marginTop: 20, borderWidth: 1.5, borderColor: Colors.gold, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 20 },
