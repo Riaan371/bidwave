@@ -23,7 +23,7 @@ serve(async () => {
 
   for (const auction of expiredAuctions) {
     // 1. Close the auction
-    await supabase.from('auctions').update({ status: 'closed' }).eq('id', auction.id);
+    await supabase.from('auctions').update({ status: 'closed', closed_at: new Date().toISOString() }).eq('id', auction.id);
 
     // 2. Fetch all lots in this auction
     const { data: lots } = await supabase

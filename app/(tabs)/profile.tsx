@@ -31,7 +31,7 @@ function ActiveLotsPanel({ userId, ink, muted, card, border }: { userId: string;
     queryFn: async () => {
       const { data, error } = await supabase
         .from('lots')
-        .select('id, title, photos, starting_bid, current_bid, category, auction_id, auctions(title, status)')
+        .select('id, title, photos, starting_bid, current_bid, category, auction_id, auctions(title, status, type, end_at, closed_at)')
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data ?? [];
@@ -66,12 +66,26 @@ function ActiveLotsPanel({ userId, ink, muted, card, border }: { userId: string;
   const inventory = (lots ?? []).filter((l: any) => !l.auction_id);
 
   // Group by auction
-  const groups: Record<string, { title: string; status: string; lots: any[] }> = {};
+  const groups: Record<string, { title: string; status: string; type: string; closedAt: string | null; lots: any[] }> = {};
   for (const lot of inAuction) {
     const aid = lot.auction_id;
-    if (!groups[aid]) groups[aid] = { title: (lot as any).auctions?.title ?? 'Auction', status: (lot as any).auctions?.status ?? '', lots: [] };
+    const auction = (lot as any).auctions;
+    if (!groups[aid]) groups[aid] = {
+      title: auction?.title ?? 'Auction',
+      status: auction?.status ?? '',
+      type: auction?.type ?? '',
+      closedAt: auction?.closed_at ?? auction?.end_at ?? null,
+      lots: [],
+    };
     groups[aid].lots.push(lot);
   }
+
+  const formatClosedAt = (iso: string | null) => {
+    if (!iso) return null;
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' }) +
+      ' at ' + d.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' });
+  };
 
   const closedStatuses = ['closed', 'cancelled'];
   const activeGroupEntries = Object.entries(groups).filter(([, g]) => !closedStatuses.includes(g.status));
@@ -182,7 +196,7 @@ function ActiveLotsPanel({ userId, ink, muted, card, border }: { userId: string;
             <View style={[{ borderWidth: 1, borderRadius: 14, marginTop: 8, padding: 12 }, { borderColor: border, backgroundColor: card }]}>
               {closedGroupEntries.map(([aid, group]) => (
                 <View key={aid} style={{ marginBottom: 10 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
                     <Text style={{ color: Colors.gold, fontWeight: '700', fontSize: 12, flex: 1 }}>📦 {group.title}</Text>
                     <View style={{ backgroundColor: '#6B7280', borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2, marginRight: 6 }}>
                       <Text style={{ color: '#fff', fontSize: 9, fontWeight: '700' }}>{group.status.toUpperCase()}</Text>
@@ -191,6 +205,10 @@ function ActiveLotsPanel({ userId, ink, muted, card, border }: { userId: string;
                       <Text style={{ color: '#DC2626', fontSize: 11, fontWeight: '700' }}>🗑 Delete Auction</Text>
                     </Pressable>
                   </View>
+                  <Text style={{ color: muted, fontSize: 11, marginBottom: 6 }}>
+                    {group.type === 'live' ? '🔴 Live' : group.type === 'timed' ? '⏱ Timed' : '—'}
+                    {formatClosedAt(group.closedAt) ? ` · Closed ${formatClosedAt(group.closedAt)}` : ''}
+                  </Text>
                   {group.lots.map((lot: any) => (
                     <View key={lot.id} style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: border, borderRadius: 10, padding: 8, marginBottom: 6, backgroundColor: 'rgba(0,0,0,0.02)' }}>
                       {lot.photos?.[0] ? (
