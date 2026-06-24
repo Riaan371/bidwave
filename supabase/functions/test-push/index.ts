@@ -40,7 +40,7 @@ serve(async (req) => {
         headings: { en: '🔔 Test Notification' },
         contents: { en: 'Push notifications are working on West Coast Pickers!' },
         url: 'https://bidwave.pages.dev',
-        chrome_web_icon: 'https://bidwave.pages.dev/icon-192-v3.png',
+        chrome_web_icon: 'https://bidwave.pages.dev/icon-192-v4.png',
       }),
     });
 

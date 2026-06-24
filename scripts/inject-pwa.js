@@ -10,9 +10,9 @@ const pwaTags = `
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="WC Pickers">
   <link rel="manifest" href="/manifest.json">
-  <link rel="apple-touch-icon" href="/icon-192-v2.png">
-  <link rel="icon" type="image/png" sizes="512x512" href="/icon-512-v2.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192-v2.png">
+  <link rel="apple-touch-icon" href="/icon-192-v4.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/icon-512-v4.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192-v4.png">
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
