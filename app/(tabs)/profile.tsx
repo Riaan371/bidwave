@@ -38,6 +38,23 @@ function ActiveLotsPanel({ userId, ink, muted, card, border }: { userId: string;
     },
   });
 
+  // Closed/cancelled auctions can end up with zero remaining lots (every lot
+  // deleted individually) — fetch them separately so they don't silently
+  // disappear from this lot-driven view, since there'd otherwise be nothing
+  // to anchor the group to.
+  const { data: emptyClosedAuctions } = useQuery({
+    queryKey: ['profile-empty-closed-auctions', userId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('auctions')
+        .select('id, title, status, type, end_at, closed_at')
+        .eq('auctioneer_id', userId)
+        .in('status', ['closed', 'cancelled']);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
   const refreshAll = () => {
     queryClient.invalidateQueries({ queryKey: ['profile-lots'] });
     queryClient.invalidateQueries({ queryKey: ['auctioneer-lots'] });
@@ -79,6 +96,15 @@ function ActiveLotsPanel({ userId, ink, muted, card, border }: { userId: string;
     };
     groups[aid].lots.push(lot);
   }
+  for (const auction of emptyClosedAuctions ?? []) {
+    if (!groups[auction.id]) groups[auction.id] = {
+      title: auction.title ?? 'Auction',
+      status: auction.status ?? '',
+      type: auction.type ?? '',
+      closedAt: auction.closed_at ?? auction.end_at ?? null,
+      lots: [],
+    };
+  }
 
   const formatClosedAt = (iso: string | null) => {
     if (!iso) return null;
@@ -93,7 +119,7 @@ function ActiveLotsPanel({ userId, ink, muted, card, border }: { userId: string;
   const activeCount = activeGroupEntries.reduce((n, [, g]) => n + g.lots.length, 0) + inventory.length;
   const completedCount = closedGroupEntries.reduce((n, [, g]) => n + g.lots.length, 0);
 
-  if (!lots || lots.length === 0) return null;
+  if ((!lots || lots.length === 0) && closedGroupEntries.length === 0) return null;
 
   return (
     <View style={{ marginBottom: 10 }}>
