@@ -38,7 +38,7 @@ serve(async (req) => {
         target_channel: 'push',
         included_segments: ['Total Subscriptions'],
         headings: { en: '🔔 Test Notification' },
-        contents: { en: 'Push notifications are working on West Coast Pickers!' },
+        contents: { en: 'Push notifications are working on West Coast Picker!' },
         url: 'https://bidwave.pages.dev',
         chrome_web_icon: 'https://bidwave.pages.dev/icon-192-v5.png',
       }),

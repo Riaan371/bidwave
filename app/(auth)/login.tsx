@@ -58,7 +58,7 @@ export default function Login() {
     <ScrollView contentContainerStyle={s.root} keyboardShouldPersistTaps="handled">
       <View style={s.logoWrap}>
         <Image source={require('../../assets/logo.png')} style={s.logo} resizeMode="contain" />
-        <Text style={s.brand}>West Coast Pickers</Text>
+        <Text style={s.brand}>West Coast Picker</Text>
         <Text style={s.brandSub}>South Africa's Live Auction Marketplace</Text>
       </View>
 

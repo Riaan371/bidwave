@@ -537,7 +537,7 @@ export default function Profile() {
       <SafeAreaView style={{ flex: 1, backgroundColor: Colors.navy }}>
         <View style={s.guestRoot}>
           <Image source={require('../../assets/logo.png')} style={s.guestLogo} resizeMode="contain" />
-          <Text style={s.guestBrand}>West Coast Pickers</Text>
+          <Text style={s.guestBrand}>West Coast Picker</Text>
           <Text style={s.guestTagline}>South Africa's Live Auction Marketplace</Text>
 
           <View style={s.guestCard}>

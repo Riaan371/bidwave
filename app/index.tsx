@@ -37,7 +37,7 @@ export default function Welcome() {
       {/* Top: logo + branding */}
       <View style={s.top}>
         <Image source={require('../assets/logo.png')} style={s.logo} resizeMode="contain" />
-        <Text style={s.title}>West Coast Pickers</Text>
+        <Text style={s.title}>West Coast Picker</Text>
         <Text style={s.tagline}>South Africa's Live Auction Marketplace</Text>
         <View style={s.divider} />
         <Text style={s.sub}>Bid live on vehicles, livestock, plant & equipment, collectibles and more — from anywhere in South Africa.</Text>

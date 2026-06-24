@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "West Coast Pickers",
+    "name": "West Coast Picker",
     "slug": "bidwave",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -24,7 +24,7 @@
       "favicon": "./assets/favicon.png",
       "bundler": "metro",
       "output": "single",
-      "name": "West Coast Pickers",
+      "name": "West Coast Picker",
       "shortName": "WC Pickers",
       "description": "South Africa's live & timed auction marketplace. Bid on vehicles, livestock, property, electronics and more.",
       "themeColor": "#0D1B2A",

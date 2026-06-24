@@ -7,7 +7,7 @@ export default function ChooseRole() {
     <View style={s.root}>
       <View style={s.header}>
         <Image source={require('../../assets/logo.png')} style={s.logo} resizeMode="contain" />
-        <Text style={s.brand}>West Coast Pickers</Text>
+        <Text style={s.brand}>West Coast Picker</Text>
       </View>
 
       <Text style={s.heading}>Create Your Account</Text>
@@ -20,7 +20,7 @@ export default function ChooseRole() {
 
       <View style={[s.card, s.dimCard]}>
         <Text style={s.cardTitle}>🔨 Auctioneer Account</Text>
-        <Text style={s.cardSub}>Auctioneer accounts are set up by the West Coast Pickers team. Contact us to get started.</Text>
+        <Text style={s.cardSub}>Auctioneer accounts are set up by the West Coast Picker team. Contact us to get started.</Text>
       </View>
 
       <View style={{ flex: 1 }} />

@@ -9,8 +9,8 @@ export default function Root({ children }: PropsWithChildren) {
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
 
-        <title>West Coast Pickers — Live Auctions</title>
-        <meta name="description" content="West Coast Pickers — South Africa's live auction marketplace. Bid on vehicles, livestock, property, electronics and more." />
+        <title>West Coast Picker — Live Auctions</title>
+        <meta name="description" content="West Coast Picker — South Africa's live auction marketplace. Bid on vehicles, livestock, property, electronics and more." />
 
         {/* PWA */}
         <meta name="theme-color" content="#0D1B2A" />
@@ -37,7 +37,7 @@ export default function Root({ children }: PropsWithChildren) {
                     type: "push",
                     autoPrompt: true,
                     text: {
-                      actionMessage: "Get notified when West Coast Pickers goes live or schedules a new auction.",
+                      actionMessage: "Get notified when West Coast Picker goes live or schedules a new auction.",
                       acceptButton: "Allow",
                       cancelButton: "No thanks"
                     },

@@ -55,7 +55,7 @@ serve(async () => {
     const html = `
       <div style="font-family:sans-serif;max-width:700px;margin:0 auto">
         <div style="background:#0D1B2E;padding:24px;border-radius:12px 12px 0 0">
-          <h1 style="color:#C49A22;margin:0;font-size:22px">West Coast Pickers</h1>
+          <h1 style="color:#C49A22;margin:0;font-size:22px">West Coast Picker</h1>
           <p style="color:rgba(255,255,255,0.7);margin:4px 0 0">Auction Closed Report</p>
         </div>
         <div style="background:#fff;padding:24px;border:1px solid #eee">
@@ -87,7 +87,7 @@ serve(async () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${RESEND_API_KEY}` },
         body: JSON.stringify({
-          from: 'West Coast Pickers <reports@westcoastpickers.co.za>',
+          from: 'West Coast Picker <reports@westcoastpickers.co.za>',
           to: [REPORT_EMAIL],
           subject: `Auction Closed: ${auction.title}`,
           html,

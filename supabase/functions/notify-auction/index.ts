@@ -17,7 +17,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({ skipped: 'status unchanged' }), { status: 200 });
     }
 
-    let title = 'West Coast Pickers';
+    let title = 'West Coast Picker';
     let message = 'A new auction is available!';
     let url = 'https://bidwave.pages.dev';
     let shouldSend = true;

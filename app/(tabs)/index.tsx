@@ -261,7 +261,7 @@ export default function Home() {
         <View style={s.header}>
           <Image source={require('../../assets/logo.png')} style={s.logo} resizeMode="contain" />
           <View style={{ flex: 1, marginLeft: 12 }}>
-            <Text style={s.headerTitle}>West Coast Pickers</Text>
+            <Text style={s.headerTitle}>West Coast Picker</Text>
             <Text style={s.headerSub}>South Africa's Live Auction Marketplace</Text>
           </View>
           <Pressable onPress={refetch} style={s.refreshBtn}>
@@ -281,7 +281,7 @@ export default function Home() {
           <View style={s.installBanner}>
             <View style={{ flex: 1 }}>
               <Text style={s.installTitle}>📲 Install App</Text>
-              <Text style={s.installSub}>Add West Coast Pickers to your home screen</Text>
+              <Text style={s.installSub}>Add West Coast Picker to your home screen</Text>
             </View>
             <Pressable onPress={handleInstall} style={s.installBtn}>
               <Text style={s.installBtnTxt}>Install</Text>
@@ -314,7 +314,7 @@ export default function Home() {
             <View style={{ backgroundColor: '#fff', borderRadius: 20, padding: 24, width: '100%', maxWidth: 360, alignItems: 'center' }}>
               <Text style={{ fontSize: 40, marginBottom: 8 }}>📲</Text>
               <Text style={{ fontSize: 18, fontWeight: '800', color: Colors.navy, marginBottom: 8, textAlign: 'center' }}>
-                Install West Coast Pickers
+                Install West Coast Picker
               </Text>
               <Text style={{ color: '#374151', fontSize: 14, lineHeight: 20, marginBottom: 20, textAlign: 'center' }}>
                 Get one-tap access from your home screen — faster loading, live auction alerts, no browser tabs to dig through.
