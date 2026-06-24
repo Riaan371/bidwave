@@ -22,6 +22,9 @@ export default function ManageLots() {
   const pickMode = pick === '1';
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showCreate, setShowCreate] = useState(false);
+  // When set, the create-lot form attaches the new lot directly to this
+  // auction instead of dropping it into unpublished inventory.
+  const [addingToAuction, setAddingToAuction] = useState<{ id: string; title: string } | null>(null);
   const [editingLot, setEditingLot] = useState<any | null>(null);
   const [savedMsg, setSavedMsg] = useState('');
 
@@ -125,6 +128,7 @@ export default function ManageLots() {
         buy_now: buyNow ? Number(buyNow) : null,
         increment: Number(increment) || 500,
         auctioneer_id: session.user.id,
+        auction_id: addingToAuction?.id ?? null,
       }).select('id').single();
       if (error) throw error;
       return data;
@@ -134,7 +138,8 @@ export default function ManageLots() {
       queryClient.invalidateQueries({ queryKey: ['lots'] });
       setTitle(''); setDescription(''); setStartingBid(''); setReserve(''); setBuyNow(''); setIncrement('500'); setImages([]);
       setShowCreate(false);
-      setSavedMsg('✅ Lot saved to your inventory!');
+      setSavedMsg(addingToAuction ? `✅ Lot added to "${addingToAuction.title}"!` : '✅ Lot saved to your inventory!');
+      setAddingToAuction(null);
       setTimeout(() => setSavedMsg(''), 4000);
       // Scroll down to show the saved lot in the list
       setTimeout(() => scrollRef.current?.scrollToEnd?.({ animated: true }), 300);
@@ -269,7 +274,7 @@ export default function ManageLots() {
 
       <ScrollView ref={scrollRef} contentContainerStyle={{ padding: 16, paddingBottom: 60 }}>
         {/* Create new lot toggle */}
-        <Pressable onPress={() => setShowCreate(!showCreate)}
+        <Pressable onPress={() => { setShowCreate(!showCreate); setAddingToAuction(null); }}
           style={[s.createToggle, { backgroundColor: showCreate ? Colors.primary : card, borderColor: showCreate ? Colors.primary : border }]}>
           <Text style={{ color: showCreate ? '#fff' : ink, fontWeight: '700', fontSize: 15 }}>
             {showCreate ? '✕ Cancel New Lot' : '+ Create New Lot'}
@@ -277,7 +282,14 @@ export default function ManageLots() {
         </Pressable>
 
         {showCreate && (
-          <View style={[s.createForm, { backgroundColor: card, borderColor: border }]}>
+          <View style={[s.createForm, { backgroundColor: card, borderColor: addingToAuction ? Colors.gold : border }]}>
+            {addingToAuction && (
+              <View style={{ backgroundColor: 'rgba(196,154,34,0.12)', borderRadius: 10, padding: 10, marginBottom: 14 }}>
+                <Text style={{ color: Colors.gold, fontWeight: '700', fontSize: 13 }}>
+                  📦 Adding directly to: {addingToAuction.title}
+                </Text>
+              </View>
+            )}
             <Text style={[s.label, { color: muted }]}>Photos</Text>
             <View style={s.imageRow}>
               {images.map((img, i) => (
@@ -493,13 +505,23 @@ export default function ManageLots() {
           }
           return (
             <>
-              {Object.entries(auctionGroups).map(([aid, group]) => (
+              {Object.entries(auctionGroups).map(([aid, group]) => {
+                const canAddLots = group.auctionStatus === 'active' || group.auctionStatus === 'scheduled';
+                return (
                 <View key={aid}>
                   <View style={[s.groupHeader, { borderColor: border }]}>
-                    <Text style={[s.groupTitle, { color: Colors.gold }]}>📦 {group.auctionTitle}</Text>
-                    <View style={[s.statusBadge, { backgroundColor: group.auctionStatus === 'active' ? '#16A34A' : group.auctionStatus === 'closed' ? '#6B7280' : Colors.navy }]}>
+                    <Text style={[s.groupTitle, { color: Colors.gold, flex: 1 }]}>📦 {group.auctionTitle}</Text>
+                    <View style={[s.statusBadge, { backgroundColor: group.auctionStatus === 'active' ? '#16A34A' : group.auctionStatus === 'closed' ? '#6B7280' : Colors.navy, marginRight: canAddLots ? 8 : 0 }]}>
                       <Text style={s.statusBadgeTxt}>{group.auctionStatus?.toUpperCase()}</Text>
                     </View>
+                    {canAddLots && (
+                      <Pressable
+                        onPress={() => { setAddingToAuction({ id: aid, title: group.auctionTitle }); setShowCreate(true); scrollRef.current?.scrollTo({ y: 0, animated: true }); }}
+                        style={{ backgroundColor: 'rgba(196,154,34,0.15)', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}
+                      >
+                        <Text style={{ color: Colors.gold, fontSize: 11, fontWeight: '700' }}>+ Add Lot</Text>
+                      </Pressable>
+                    )}
                   </View>
                   {group.lots.map((lot: any) => (
                     <View key={lot.id} style={[s.lotRow, { backgroundColor: card, borderColor: border }]}>
@@ -517,7 +539,8 @@ export default function ManageLots() {
                     </View>
                   ))}
                 </View>
-              ))}
+                );
+              })}
               {inventory.length > 0 && (
                 <View style={[s.groupHeader, { borderColor: border }]}>
                   <Text style={[s.groupTitle, { color: ink }]}>🗃 Inventory (not yet published)</Text>
