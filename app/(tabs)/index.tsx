@@ -7,6 +7,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../lib/auth-store';
 import { useAppTheme, Colors } from '../../lib/theme';
 import { requestNotificationPermission, getNotificationPermission } from '../../lib/onesignal';
+import { shouldShowInstallPrompt, markInstallPromptShown } from '../../lib/install-prompt';
 
 const { width: SW } = Dimensions.get('window');
 const CARD_W = SW > 600 ? 320 : SW * 0.78;
@@ -162,6 +163,7 @@ export default function Home() {
   const [showInstall, setShowInstall] = useState(false);
   const [showIOSGuide, setShowIOSGuide] = useState(false);
   const [showNotifAsk, setShowNotifAsk] = useState(false);
+  const [showInstallTakeover, setShowInstallTakeover] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -198,6 +200,32 @@ export default function Home() {
     window.addEventListener('beforeinstallprompt', handler);
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
+
+  // Proactively offer install: immediately on a first-ever visit, or later
+  // once the user has shown real engagement (viewed 2+ lots / placed a bid).
+  // iOS never fires beforeinstallprompt, so it qualifies as soon as we know
+  // the platform; Android/desktop Chrome waits for the deferred event.
+  useEffect(() => {
+    if (isInStandalone) return;
+    if (!isIOS && !installPrompt) return;
+    if (!shouldShowInstallPrompt()) return;
+    const t = setTimeout(() => setShowInstallTakeover(true), 1500);
+    return () => clearTimeout(t);
+  }, [isIOS, installPrompt, isInStandalone]);
+
+  const dismissInstallTakeover = () => {
+    setShowInstallTakeover(false);
+    markInstallPromptShown();
+  };
+
+  const acceptInstallTakeover = async () => {
+    markInstallPromptShown();
+    setShowInstallTakeover(false);
+    if (isIOS) { setShowIOSGuide(true); return; }
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    await installPrompt.userChoice;
+  };
 
   const handleInstall = async () => {
     if (isIOS) { setShowIOSGuide(true); return; }
@@ -275,6 +303,27 @@ export default function Home() {
               </Pressable>
               <Pressable onPress={handleDismissNotifAsk} style={{ padding: 8 }}>
                 <Text style={{ color: '#9CA3AF', fontSize: 13 }}>Not now</Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
+
+        {/* Proactive install takeover — first visit, or after engagement on later visits */}
+        {showInstallTakeover && (
+          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 999, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+            <View style={{ backgroundColor: '#fff', borderRadius: 20, padding: 24, width: '100%', maxWidth: 360, alignItems: 'center' }}>
+              <Text style={{ fontSize: 40, marginBottom: 8 }}>📲</Text>
+              <Text style={{ fontSize: 18, fontWeight: '800', color: Colors.navy, marginBottom: 8, textAlign: 'center' }}>
+                Install West Coast Pickers
+              </Text>
+              <Text style={{ color: '#374151', fontSize: 14, lineHeight: 20, marginBottom: 20, textAlign: 'center' }}>
+                Get one-tap access from your home screen — faster loading, live auction alerts, no browser tabs to dig through.
+              </Text>
+              <Pressable onPress={acceptInstallTakeover} style={{ backgroundColor: Colors.gold, borderRadius: 10, padding: 14, alignItems: 'center', width: '100%', marginBottom: 10 }}>
+                <Text style={{ color: Colors.navy, fontWeight: '800' }}>Install Now</Text>
+              </Pressable>
+              <Pressable onPress={dismissInstallTakeover} style={{ padding: 8 }}>
+                <Text style={{ color: '#9CA3AF', fontSize: 13 }}>Maybe later</Text>
               </Pressable>
             </View>
           </View>

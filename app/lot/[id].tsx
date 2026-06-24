@@ -8,6 +8,7 @@ import { useAuthStore } from '../../lib/auth-store';
 import { useAppTheme, Colors } from '../../lib/theme';
 import type { Lot } from '../../lib/types';
 import CountdownTimer from '../../components/CountdownTimer';
+import { trackLotView, trackBidPlaced } from '../../lib/install-prompt';
 
 function formatZAR(amount: number | null | undefined) {
   if (amount == null) return '—';
@@ -179,11 +180,16 @@ export default function LotDetail() {
       return bidAmount;
     },
     onSuccess: () => {
+      trackBidPlaced();
       queryClient.invalidateQueries({ queryKey: ['lot', id] });
       queryClient.invalidateQueries({ queryKey: ['lot', id, 'bids'] });
     },
     onError: (error: any) => { Alert.alert('Could not place bid', error.message); },
   });
+
+  useEffect(() => {
+    if (id) trackLotView(id);
+  }, [id]);
 
   if (isLoading || !lot) {
     return (
