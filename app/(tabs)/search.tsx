@@ -20,6 +20,24 @@ export default function Search() {
 
   useEffect(() => { if (params.category) setCategory(params.category); }, [params.category]);
 
+  // Only show category chips that currently have at least one lot in an
+  // active/scheduled auction (mirrors what's actually visible on Home),
+  // so users don't tap into a category that's empty.
+  const { data: activeCategories } = useQuery({
+    queryKey: ['search-active-categories'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('lots')
+        .select('category, auctions!inner(status)')
+        .not('auction_id', 'is', null)
+        .in('auctions.status', ['scheduled', 'active']);
+      if (error) throw error;
+      return new Set((data ?? []).map((l: any) => l.category).filter(Boolean));
+    },
+  });
+
+  const visibleCategories = CATEGORIES.filter((c) => activeCategories?.has(c));
+
   const { data: lots, isLoading } = useQuery({
     queryKey: ['lots', 'search', query, category],
     queryFn: async () => {
@@ -56,24 +74,26 @@ export default function Search() {
         />
       </View>
 
-      <View style={{ paddingHorizontal: 16, marginBottom: 10 }}>
-        <Text style={[s.catLabel, { color: muted }]}>Categories</Text>
-        <FlatList
-          data={CATEGORIES} horizontal showsHorizontalScrollIndicator={false}
-          keyExtractor={(item) => item}
-          renderItem={({ item }) => {
-            const active = category === item;
-            return (
-              <Pressable
-                onPress={() => setCategory(active ? null : item)}
-                style={[s.chip, { borderColor: active ? Colors.primary : border, backgroundColor: active ? Colors.primary : 'transparent' }]}
-              >
-                <Text style={[s.chipTxt, { color: active ? '#fff' : ink }]}>{item}</Text>
-              </Pressable>
-            );
-          }}
-        />
-      </View>
+      {visibleCategories.length > 0 && (
+        <View style={{ paddingHorizontal: 16, marginBottom: 10 }}>
+          <Text style={[s.catLabel, { color: muted }]}>Categories</Text>
+          <FlatList
+            data={visibleCategories} horizontal showsHorizontalScrollIndicator={false}
+            keyExtractor={(item) => item}
+            renderItem={({ item }) => {
+              const active = category === item;
+              return (
+                <Pressable
+                  onPress={() => setCategory(active ? null : item)}
+                  style={[s.chip, { borderColor: active ? Colors.primary : border, backgroundColor: active ? Colors.primary : 'transparent' }]}
+                >
+                  <Text style={[s.chipTxt, { color: active ? '#fff' : ink }]}>{item}</Text>
+                </Pressable>
+              );
+            }}
+          />
+        </View>
+      )}
 
       {!showResults ? (
         <View style={s.empty}>
