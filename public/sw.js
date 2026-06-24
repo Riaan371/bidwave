@@ -1,6 +1,6 @@
 importScripts("https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js");
 
-const CACHE = 'bidwave-v8';
+const CACHE = 'bidwave-v9';
 const OFFLINE = ['/'];
 
 self.addEventListener('message', (event) => {

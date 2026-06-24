@@ -12,7 +12,7 @@ export async function onRequest(context) {
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="WC Pickers">
+  <meta name="apple-mobile-web-app-title" content="WC Online Auction">
   <link rel="manifest" href="/manifest.json">
   <link rel="apple-touch-icon" href="/icon-192-v5.png">
   <link rel="icon" type="image/png" sizes="512x512" href="/icon-512-v5.png">

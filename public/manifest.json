@@ -1,7 +1,7 @@
 {
   "name": "West Coast Picker",
   "gcm_sender_id": "482941778795",
-  "short_name": "WC Pickers",
+  "short_name": "WC Online Auction",
   "description": "West Coast Picker — Live Auction Marketplace",
   "start_url": "/",
   "scope": "/",
