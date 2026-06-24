@@ -1,7 +1,7 @@
 import { View, Text, FlatList, Image, Pressable, TouchableOpacity, TextInput, ScrollView, ActivityIndicator, Alert, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { decode } from 'base64-arraybuffer';
@@ -18,7 +18,7 @@ export default function ManageLots() {
   const queryClient = useQueryClient();
   const scrollRef = useRef<ScrollView>(null);
   // If opened from schedule-live, we're in "pick" mode
-  const { pick } = useLocalSearchParams<{ pick?: string }>();
+  const { pick, addAuctionId, addAuctionTitle } = useLocalSearchParams<{ pick?: string; addAuctionId?: string; addAuctionTitle?: string }>();
   const pickMode = pick === '1';
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showCreate, setShowCreate] = useState(false);
@@ -27,6 +27,15 @@ export default function ManageLots() {
   const [addingToAuction, setAddingToAuction] = useState<{ id: string; title: string } | null>(null);
   const [editingLot, setEditingLot] = useState<any | null>(null);
   const [savedMsg, setSavedMsg] = useState('');
+
+  // Arrived via the "+ Add Lot" shortcut from Profile — auto-open the form
+  // pre-targeted at that auction.
+  useEffect(() => {
+    if (addAuctionId && addAuctionTitle) {
+      setAddingToAuction({ id: addAuctionId, title: addAuctionTitle });
+      setShowCreate(true);
+    }
+  }, [addAuctionId, addAuctionTitle]);
 
   // Create lot form state
   const [images, setImages] = useState<{ uri: string; base64: string | null }[]>([]);

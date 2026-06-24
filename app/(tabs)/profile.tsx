@@ -114,6 +114,14 @@ function ActiveLotsPanel({ userId, ink, muted, card, border }: { userId: string;
                 <View style={{ backgroundColor: group.status === 'active' ? '#16A34A' : '#6B7280', borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2, marginRight: 6 }}>
                   <Text style={{ color: '#fff', fontSize: 9, fontWeight: '700' }}>{group.status.toUpperCase()}</Text>
                 </View>
+                {(group.status === 'active' || group.status === 'scheduled') && (
+                  <Pressable
+                    onPress={() => router.push({ pathname: '/manage-lots', params: { addAuctionId: aid, addAuctionTitle: group.title } })}
+                    style={{ backgroundColor: 'rgba(196,154,34,0.15)', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, marginRight: 6 }}
+                  >
+                    <Text style={{ color: Colors.gold, fontSize: 11, fontWeight: '700' }}>+ Add Lot</Text>
+                  </Pressable>
+                )}
                 <Pressable onPress={() => deleteAuctionGroup(aid, group.title)} style={{ backgroundColor: '#FEE2E2', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
                   <Text style={{ color: '#DC2626', fontSize: 11, fontWeight: '700' }}>🗑 Delete Auction</Text>
                 </Pressable>
