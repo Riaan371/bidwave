@@ -160,7 +160,6 @@ export default function Home() {
   const { bg, ink, muted, border } = useAppTheme();
 
   const [installPrompt, setInstallPrompt] = useState<any>(null);
-  const [showInstall, setShowInstall] = useState(false);
   const [showIOSGuide, setShowIOSGuide] = useState(false);
   const [showNotifAsk, setShowNotifAsk] = useState(false);
   const [showInstallTakeover, setShowInstallTakeover] = useState(false);
@@ -227,14 +226,6 @@ export default function Home() {
     await installPrompt.userChoice;
   };
 
-  const handleInstall = async () => {
-    if (isIOS) { setShowIOSGuide(true); return; }
-    if (!installPrompt) { setShowIOSGuide(true); return; }
-    installPrompt.prompt();
-    const { outcome } = await installPrompt.userChoice;
-    if (outcome === 'accepted') setShowInstall(false);
-  };
-
   const { data: events, isRefetching, refetch } = useQuery({
     queryKey: ['auction-events'],
     queryFn: fetchAuctionEvents,
@@ -273,20 +264,6 @@ export default function Home() {
         {profile && (
           <View style={[s.welcomeBar, { borderBottomColor: border }]}>
             <Text style={[s.welcomeTxt, { color: muted }]}>Welcome back, <Text style={{ color: Colors.gold, fontWeight: '700' }}>{profile.full_name.split(' ')[0]}</Text></Text>
-          </View>
-        )}
-
-        {/* ── INSTALL BANNER ── */}
-        {/* Install App banner — always visible unless already installed */}
-        {!isInStandalone && (
-          <View style={s.installBanner}>
-            <View style={{ flex: 1 }}>
-              <Text style={s.installTitle}>📲 Install App</Text>
-              <Text style={s.installSub}>Add West Coast Picker to your home screen</Text>
-            </View>
-            <Pressable onPress={handleInstall} style={s.installBtn}>
-              <Text style={s.installBtnTxt}>Install</Text>
-            </Pressable>
           </View>
         )}
 
@@ -414,12 +391,6 @@ const s = StyleSheet.create({
 
   welcomeBar: { paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1 },
   welcomeTxt: { fontSize: 13 },
-  installBanner: { backgroundColor: Colors.navy, borderBottomWidth: 2, borderBottomColor: Colors.gold, paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  installTitle: { color: '#fff', fontWeight: '800', fontSize: 13 },
-  installSub: { color: 'rgba(255,255,255,0.65)', fontSize: 11, marginTop: 2 },
-  installBtn: { backgroundColor: Colors.gold, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8 },
-  installBtnTxt: { color: Colors.navy, fontWeight: '800', fontSize: 13 },
-  installDismiss: { padding: 4 },
 
   // Live banner
   liveBanner: { backgroundColor: Colors.navy, borderWidth: 1.5, borderColor: '#DC2626', borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
