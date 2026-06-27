@@ -180,7 +180,11 @@ export default function LiveRoom() {
       clientRef.current = client;
       client.on('user-published', async (user: any, mediaType: string) => {
         await client.subscribe(user, mediaType);
-        if (mediaType === 'audio') { user.audioTrack?.play(); remoteAudioRef.current.add(user.audioTrack); }
+        // The auctioneer is the only one who ever publishes audio here — if the
+        // host played back received audio too, any echo of their own stream
+        // (e.g. a stale connection from a previous join) would loop right back
+        // through their own speaker. Only bidders/listeners should hear it.
+        if (mediaType === 'audio' && !isHost) { user.audioTrack?.play(); remoteAudioRef.current.add(user.audioTrack); }
       });
       client.on('user-unpublished', (user: any) => { user.audioTrack?.stop(); remoteAudioRef.current.delete(user.audioTrack); });
       client.on('user-joined', () => setListenerCount((c) => c + 1));
@@ -254,7 +258,26 @@ export default function LiveRoom() {
   }
 
   useEffect(() => {
-    return () => { hardStopMic(); clientRef.current?.leave().catch(() => {}); };
+    if (Platform.OS !== 'web') return;
+    // If the page is closed, refreshed, or the app is backgrounded without
+    // tapping "End Session", the React unmount cleanup below never runs and
+    // the mic keeps publishing until Agora's own connection timeout — which
+    // is exactly how a stale broadcast lingers (and can echo back as feedback
+    // on the next join). Force-kill the mic the instant the page is leaving.
+    const forceStop = () => {
+      const track = micTrackRef.current;
+      try { clientRef.current?.unpublish(track ?? undefined); } catch {}
+      hardStopMic();
+      try { clientRef.current?.leave(); } catch {}
+    };
+    window.addEventListener('pagehide', forceStop);
+    window.addEventListener('beforeunload', forceStop);
+    return () => {
+      window.removeEventListener('pagehide', forceStop);
+      window.removeEventListener('beforeunload', forceStop);
+      hardStopMic();
+      clientRef.current?.leave().catch(() => {});
+    };
   }, []);
 
   return (

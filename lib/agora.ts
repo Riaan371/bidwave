@@ -27,11 +27,22 @@ export async function getAgoraToken(channel: string, role: 'publisher' | 'subscr
 }
 
 export async function markSessionLive(auctionId: string, userId: string) {
-  const { error } = await supabase.from('live_sessions').upsert(
-    { auction_id: auctionId, auctioneer_id: userId, channel_name: auctionId, status: 'live' },
-    { onConflict: 'auction_id' }
-  );
-  if (error) throw new Error(`Failed to mark session live: ${error.message}`);
+  // No unique constraint on auction_id, so upsert's ON CONFLICT can't target
+  // it — update the existing row (created at scheduling time) and only
+  // insert if one doesn't exist yet (host went live without pre-scheduling).
+  const { data: updated, error: updateError } = await supabase
+    .from('live_sessions')
+    .update({ status: 'live' })
+    .eq('auction_id', auctionId)
+    .select('id');
+  if (updateError) throw new Error(`Failed to mark session live: ${updateError.message}`);
+
+  if (!updated || updated.length === 0) {
+    const { error: insertError } = await supabase
+      .from('live_sessions')
+      .insert({ auction_id: auctionId, auctioneer_id: userId, channel_name: auctionId, status: 'live' });
+    if (insertError) throw new Error(`Failed to mark session live: ${insertError.message}`);
+  }
 
   const { error: auctionError } = await supabase
     .from('auctions')
