@@ -107,7 +107,7 @@ function AuctionEventCard({ session, photos }: { session: any; photos?: string[]
   const isLive = session.status === 'live';
   const isTimed = session.status === 'timed';
   const dt = session.scheduled_at ? new Date(session.scheduled_at) : null;
-  const dateStr = dt ? dt.toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+  const dateStr = dt ? `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${dt.getFullYear()}` : '';
   const timeStr = dt ? dt.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' }) : '';
   const lotCount = session.lot_ids?.length ?? 0;
   const title = session.title ?? session.auctions?.title ?? 'Auction Event';

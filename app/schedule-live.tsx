@@ -36,11 +36,14 @@ export default function ScheduleLive() {
 
   const parseDateTime = (): string | null => {
     if (!date) return null;
-    const [d, m, y] = date.split('/');
+    if (date.length !== 8) throw new Error('Enter the date as DDMMYYYY (8 digits)');
+    const d = date.slice(0, 2);
+    const m = date.slice(2, 4);
+    const y = date.slice(4, 8);
     const h = hour || '18';
     const min = minute || '00';
     const dt = new Date(Number(y), Number(m) - 1, Number(d), Number(h), Number(min));
-    if (isNaN(dt.getTime())) throw new Error('Invalid date format — use DD/MM/YYYY');
+    if (isNaN(dt.getTime())) throw new Error('Invalid date — use DDMMYYYY');
     return dt.toISOString();
   };
 
@@ -158,10 +161,10 @@ export default function ScheduleLive() {
             placeholderTextColor="#9CA3AF" style={[inputStyle, s.mb]} />
 
           <Text style={[s.label, { color: muted }]}>
-            {auctionType === 'timed' ? 'Closing Date (DD/MM/YYYY) *' : 'Event Date (DD/MM/YYYY)'}
+            {auctionType === 'timed' ? 'Closing Date (DDMMYYYY) *' : 'Event Date (DDMMYYYY)'}
           </Text>
-          <TextInput value={date} onChangeText={setDate} placeholder="30/06/2026"
-            placeholderTextColor="#9CA3AF" keyboardType="numeric" style={[inputStyle, s.mb]} />
+          <TextInput value={date} onChangeText={(v) => setDate(v.replace(/[^0-9]/g, '').slice(0, 8))} placeholder="30062026"
+            placeholderTextColor="#9CA3AF" keyboardType="numeric" maxLength={8} style={[inputStyle, s.mb]} />
 
           <Text style={[s.label, { color: muted }]}>
             {auctionType === 'timed' ? 'Closing Time *' : 'Event Time'}

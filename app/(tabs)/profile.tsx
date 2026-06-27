@@ -160,15 +160,15 @@ function ActiveLotsPanel({ userId, ink, muted, card, border }: { userId: string;
 
           {activeGroupEntries.map(([aid, group]) => (
             <View key={aid} style={{ marginBottom: 10 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                <Text style={{ color: Colors.gold, fontWeight: '700', fontSize: 12, flex: 1 }}>📦 {group.title}</Text>
-                <View style={{ backgroundColor: group.status === 'active' ? '#16A34A' : '#6B7280', borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2, marginRight: 6 }}>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', marginBottom: 6, gap: 6 }}>
+                <Text style={{ color: Colors.gold, fontWeight: '700', fontSize: 12, flexBasis: '100%' }}>📦 {group.title}</Text>
+                <View style={{ backgroundColor: group.status === 'active' ? '#16A34A' : '#6B7280', borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2 }}>
                   <Text style={{ color: '#fff', fontSize: 9, fontWeight: '700' }}>{group.status.toUpperCase()}</Text>
                 </View>
                 {(group.status === 'active' || group.status === 'scheduled') && (
                   <Pressable
                     onPress={() => router.push({ pathname: '/manage-lots', params: { addAuctionId: aid, addAuctionTitle: group.title } })}
-                    style={{ backgroundColor: 'rgba(196,154,34,0.15)', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, marginRight: 6 }}
+                    style={{ backgroundColor: 'rgba(196,154,34,0.15)', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}
                   >
                     <Text style={{ color: Colors.gold, fontSize: 11, fontWeight: '700' }}>+ Add Lot</Text>
                   </Pressable>
@@ -255,9 +255,9 @@ function ActiveLotsPanel({ userId, ink, muted, card, border }: { userId: string;
             <View style={[{ borderWidth: 1, borderRadius: 14, marginTop: 8, padding: 12 }, { borderColor: border, backgroundColor: card }]}>
               {closedGroupEntries.map(([aid, group]) => (
                 <View key={aid} style={{ marginBottom: 10 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
-                    <Text style={{ color: Colors.gold, fontWeight: '700', fontSize: 12, flex: 1 }}>📦 {group.title}</Text>
-                    <View style={{ backgroundColor: '#6B7280', borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2, marginRight: 6 }}>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', marginBottom: 2, gap: 6 }}>
+                    <Text style={{ color: Colors.gold, fontWeight: '700', fontSize: 12, flexBasis: '100%' }}>📦 {group.title}</Text>
+                    <View style={{ backgroundColor: '#6B7280', borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2 }}>
                       <Text style={{ color: '#fff', fontSize: 9, fontWeight: '700' }}>{group.status.toUpperCase()}</Text>
                     </View>
                     <Pressable onPress={() => deleteCompletedAuctionGroup(aid, group.title, group.lots)} style={{ backgroundColor: '#FEE2E2', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
