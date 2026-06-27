@@ -112,15 +112,6 @@ export default function LotDetail() {
     }
   }, [lot?.current_bid, lot?.starting_bid]);
 
-  const endLiveSession = async () => {
-    await supabase.from('live_sessions')
-      .update({ status: 'ended' })
-      .eq('auction_id', lot?.auction_id ?? '')
-      .eq('status', 'live');
-    queryClient.invalidateQueries({ queryKey: ['live-sessions'] });
-    queryClient.invalidateQueries({ queryKey: ['live-session', lot?.auction_id] });
-  };
-
   const markSold = useMutation({
     mutationFn: async () => {
       if (!bids || bids.length === 0) throw new Error('No bids placed yet.');
@@ -140,7 +131,6 @@ export default function LotDetail() {
         winner_name: topBid.users?.full_name ?? null,
         sold_at: new Date().toISOString(),
       }).select();
-      await endLiveSession();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lot', id] });
@@ -159,7 +149,6 @@ export default function LotDetail() {
     mutationFn: async () => {
       const { error } = await supabase.from('lots').update({ closed: true, no_sale: true }).eq('id', id);
       if (error) throw error;
-      await endLiveSession();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lot', id] });
